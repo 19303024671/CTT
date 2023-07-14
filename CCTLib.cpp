@@ -3,8 +3,34 @@
 
 #include "pch.h"
 #include "framework.h"
+#include "CCTLib.h"
 
-// TODO: 这是一个库函数示例
-void fnCCTLib()
+using namespace std;
+
+DrawCCT::DrawCCT(const CCTInfo& cct_info)
 {
+	this->cct_infor = cct_info;
+}
+
+DrawCCT::~DrawCCT()
+{
+}
+//将整数转成二进制vector
+vector<int> DrawCCT::IntTuBin(int num,const int& N)
+{
+	vector<int> bin;
+	for (size_t i = 0; i < N; i++)
+	{
+		if (num>0)
+		{
+			bin.push_back(num % 2);
+			num = num / 2;
+		}
+		else
+		{
+			bin.push_back(0);
+		}
+	}
+	reverse(bin.begin(), bin.end());
+	return bin;
 }
