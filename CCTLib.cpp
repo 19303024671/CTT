@@ -15,8 +15,13 @@ DrawCCT::DrawCCT(const CCTInfo& cct_info)
 DrawCCT::~DrawCCT()
 {
 }
-//将整数转成二进制vector
-vector<int> DrawCCT::IntTuBin(int num,const int& N)
+/*
+* @brief 整数转二进制vector
+* 
+* @param num 待转整数
+* @param N 转成的位数，不足用0补齐
+*/
+vector<int> DrawCCT::IntToBin(int num,const int& N)
 {
 	vector<int> bin;
 	for (size_t i = 0; i < N; i++)
@@ -34,3 +39,18 @@ vector<int> DrawCCT::IntTuBin(int num,const int& N)
 	reverse(bin.begin(), bin.end());
 	return bin;
 }
+/*
+* @brief 将二进制转成整数
+*/
+int DrawCCT::BinToInt(const vector<int>& bin, int N)
+{
+	if (bin.size() != N) return 0;
+	int num = 0;
+	for (int i : bin)
+	{
+		num += i *pow(2,N-1);
+		N -= 1;	
+	}
+	return num;
+}
+

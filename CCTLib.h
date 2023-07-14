@@ -28,8 +28,10 @@ class DrawCCT
 public:
 	DrawCCT(const CCTInfo& cct_info);
 	~DrawCCT();
-	//将整数转成二进制的vector
-	vector<int> IntTuBin( int num,const int& N);
+	//将整数转成二进制vector
+	vector<int> IntToBin( int num,const int& N);
+	//将二进制的vector转成整数
+	int BinToInt(const vector<int>& bin, int N);
 private:
 	CCTInfo cct_infor;
 };
