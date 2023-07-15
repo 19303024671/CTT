@@ -3,8 +3,11 @@
 #include<iostream>
 #include<string>
 #include<vector>
+#include<filesystem>
+#include<opencv2/opencv.hpp>
 
 using namespace std;
+namespace fs = std::filesystem;
 
 //环形码的颜色
 enum CCTColor
@@ -24,6 +27,8 @@ struct CCTInfo
 	vector<int> bin;//编码的二进制vector
 public:
 	void Init();
+	CCTInfo(const int&N_,const CCTColor&color_,const double&size_,const int&num);
+	CCTInfo();
 };
 
 class DrawCCT
@@ -35,8 +40,8 @@ public:
 	vector<int> IntToBin( int num,const int& N);
 	//将二进制的vector转成整数
 	int BinToInt(const vector<int>& bin, int N);
-	//绘制CCT图像
-	void Draw();
+	//绘制一张CCT图像
+	void DrawACCT();
 private:
 	CCTInfo cct_infor;
 };

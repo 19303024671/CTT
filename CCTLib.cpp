@@ -57,12 +57,45 @@ int DrawCCT::BinToInt(const vector<int>& bin, int N)
 	return num;
 }
 
-void DrawCCT::Draw()
+void DrawCCT::DrawACCT()
 {
-	int N = this->cct_infor.N;//分值
-	double unit_angle = 360.0 / N;//单位角度
-	
-
+	double unit_angle = 360.0 / cct_infor.N;//单位角度
+	//创建文件夹
+	if (!fs::exists(cct_infor.dir_path))
+	{
+		if (!fs::create_directory(cct_infor.dir_path))
+		{
+			cerr << "创建文件夹：" << cct_infor.dir_path <<
+				"失败！" << endl;
+			return;
+		}
+	}
+	string file_name = to_string(cct_infor.num) +
+		string(".png");
+	string file_path = cct_infor.dir_path + file_name;
+	if (fs::exists(file_path))
+	{
+		cout << "文件：" << file_path << 
+			"已存在！\n是否覆盖：(y/n)\n";
+		string temp;
+		cin >> temp;
+		if (temp == "n") return;
+	}
+	//创建绘图画布
+	cv::Mat image(cct_infor.size, cct_infor.size, CV_8UC3);
+	switch (cct_infor.color)
+	{
+	case black:
+		image.setTo(cv::Scalar(0, 0, 0));
+		break;
+	case white:
+		image.setTo(cv::Scalar(255, 255, 255));
+		break;
+	default:
+		break;
+	}
+	cv::imshow("画布展示：",image);
+	cv::waitKey(0);
 }
 
 void CCTInfo::Init()
@@ -80,4 +113,14 @@ void CCTInfo::Init()
 	default:
 		break;
 	}
+}
+
+CCTInfo::CCTInfo(const int& N_, const CCTColor& color_, 
+	const double& size_, const int& num_):
+	N(N_),color(color_),size(size_),num(num_)
+{
+}
+
+CCTInfo::CCTInfo()
+{
 }
