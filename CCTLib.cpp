@@ -54,3 +54,44 @@ int DrawCCT::BinToInt(const vector<int>& bin, int N)
 	return num;
 }
 
+void DrawCCT::Draw()
+{
+	int N = this->cct_infor.N;//分值
+	double unit_angle = 360.0 / N;//单位角度
+	
+
+}
+
+
+CCTInfo::CCTInfo(const int& N_, const CCTColor& color_, 
+	const double& size_, const int& num_):N(N_),color(color_),
+	size(size_),num(num_)
+{
+}
+
+CCTInfo::CCTInfo(const int& N_, const CCTColor& color_,
+	const double& size_, const vector<int>& bin_):
+	N(N_),color(color_),size(size_),bin(bin_)
+{
+}
+
+CCTInfo::CCTInfo()
+{
+}
+
+void CCTInfo::Init()
+{
+	switch (color)
+	{
+	case black:
+		dir_path = string("./CCT_IMG_") + to_string(N)
+			+ string("_Black/");
+		break;
+	case white:
+		dir_path = string("./CCT_IMG_") + to_string(N)
+			+ string("_White/");
+		break;
+	default:
+		break;
+	}
+}

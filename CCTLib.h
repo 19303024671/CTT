@@ -21,6 +21,15 @@ struct CCTInfo
 	int N;//等分数
 	CCTColor color;//环形码颜色
 	double size;//图片尺寸
+	int num;//编码的整数
+	vector<int> bin;//编码的二进制vector
+public:
+	CCTInfo(const int&N_,const CCTColor&color_,
+		const double&size_,const int&num);
+	CCTInfo(const int& N_, const CCTColor& color_,
+		const double& size_, const vector<int>&bin);
+	CCTInfo();
+	void Init();
 };
 
 class DrawCCT
@@ -32,6 +41,8 @@ public:
 	vector<int> IntToBin( int num,const int& N);
 	//将二进制的vector转成整数
 	int BinToInt(const vector<int>& bin, int N);
+	//绘制CCT图像
+	void Draw();
 private:
 	CCTInfo cct_infor;
 };
