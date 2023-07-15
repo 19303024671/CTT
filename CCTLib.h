@@ -17,18 +17,12 @@ enum CCTColor
 struct CCTInfo
 {
 	string dir_path;//文件夹路径
-	string file_path;//文件名
 	int N;//等分数
 	CCTColor color;//环形码颜色
 	double size;//图片尺寸
 	int num;//编码的整数
 	vector<int> bin;//编码的二进制vector
 public:
-	CCTInfo(const int&N_,const CCTColor&color_,
-		const double&size_,const int&num);
-	CCTInfo(const int& N_, const CCTColor& color_,
-		const double& size_, const vector<int>&bin);
-	CCTInfo();
 	void Init();
 };
 

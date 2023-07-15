@@ -7,9 +7,12 @@
 
 using namespace std;
 
-DrawCCT::DrawCCT(const CCTInfo& cct_info)
+DrawCCT::DrawCCT(const CCTInfo& cct_info_)
 {
-	this->cct_infor = cct_info;
+	this->cct_infor = cct_info_;
+	this->cct_infor.Init();
+	this->cct_infor.bin = IntToBin(cct_infor.num,
+		cct_infor.N);
 }
 
 DrawCCT::~DrawCCT()
@@ -60,23 +63,6 @@ void DrawCCT::Draw()
 	double unit_angle = 360.0 / N;//单位角度
 	
 
-}
-
-
-CCTInfo::CCTInfo(const int& N_, const CCTColor& color_, 
-	const double& size_, const int& num_):N(N_),color(color_),
-	size(size_),num(num_)
-{
-}
-
-CCTInfo::CCTInfo(const int& N_, const CCTColor& color_,
-	const double& size_, const vector<int>& bin_):
-	N(N_),color(color_),size(size_),bin(bin_)
-{
-}
-
-CCTInfo::CCTInfo()
-{
 }
 
 void CCTInfo::Init()
