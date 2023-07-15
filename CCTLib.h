@@ -25,7 +25,14 @@ struct Flabellate
 	int thickness = -1;//厚度，-1表示填充
 	cv::Scalar color;//颜色(BGR顺序)
 };
-
+//圆
+struct Circle
+{
+	cv::Point center;//圆心
+	int radius;//半径
+	int thickness = -1;//厚度
+	cv::Scalar color;//颜色
+};
 //绘制环形码所需的信息
 struct CCTInfo
 {
@@ -36,6 +43,8 @@ struct CCTInfo
 	int num;//编码的整数
 	vector<int> bin;//编码的二进制vector
 	Flabellate flabellate;//扇形信息
+	Circle circle_out;//外圆形（大）信息
+	Circle circle_in;//内圆形（小）信息
 
 public:
 	void Init();

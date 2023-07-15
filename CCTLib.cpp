@@ -94,6 +94,12 @@ void DrawCCT::DrawACCT()
 	default:
 		break;
 	}
+	//绘制一个圆周
+	Circle circle = cct_infor.circle_in;
+	circle.thickness = 2;
+	circle.radius = cct_infor.flabellate.radius;
+	cv::circle(image, circle.center, circle.radius,
+		circle.color, circle.thickness);
 	//绘制扇形
 	double unit_angle = 360.0 / cct_infor.N;//单位角度
 	int k = 0;
@@ -108,27 +114,44 @@ void DrawCCT::DrawACCT()
 			cct_infor.flabellate.thickness);
 		k += 1;
 	}
-	cv::imshow("扇形绘制", image);
+	//绘制内大圆
+	cv::circle(image, cct_infor.circle_out.center,
+		cct_infor.circle_out.radius,
+		cct_infor.circle_out.color,
+		cct_infor.circle_out.thickness);
+	//绘制内小圆
+	cv::circle(image, cct_infor.circle_in.center,
+		cct_infor.circle_in.radius,
+		cct_infor.circle_in.color,
+		cct_infor.circle_in.thickness);
+	cv::imshow("完全体", image);
 	cv::waitKey(0);
+
 }
 
 void CCTInfo::Init()
 {
+	flabellate.center = cv::Point(size / 2, size / 2);
+	flabellate.radius = int(0.4 * size);
+	circle_in.center = cv::Point(size / 2, size / 2);
+	circle_in.radius = int(0.1 * size);
+	circle_out.center = cv::Point(size / 2, size / 2);
+	circle_out.radius = int(0.2 * size);
 	switch (color)
 	{
 	case black:
 		dir_path = string("./CCT_IMG_") + to_string(N)
-			+ string("_Black/");
-		flabellate.center = cv::Point(size / 2, size / 2);
+			+ string("_Black/");	
 		flabellate.color = cv::Scalar(0, 0, 0);
-		flabellate.radius = int(0.4 * size);
+		circle_in.color = cv::Scalar(0, 0, 0);
+		circle_out.color = cv::Scalar(255, 255, 255);
 		break;
 	case white:
 		dir_path = string("./CCT_IMG_") + to_string(N)
 			+ string("_White/");
-		flabellate.center = cv::Point(size / 2, size / 2);
 		flabellate.color = cv::Scalar(255, 255, 255);
-		flabellate.radius = int(0.4 * size);
+		circle_in.color = cv::Scalar(255, 255, 255);
+		circle_out.color = cv::Scalar(0, 0, 0);
 		break;
 	default:
 		break;
