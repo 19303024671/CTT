@@ -41,6 +41,7 @@ struct CCTInfo
 	CCTColor color;//环形码颜色
 	int size;//图片尺寸
 	int num;//编码的整数
+	int max_num;//N位二进制表示的最大整数
 	vector<int> bin;//编码的二进制vector
 	Flabellate flabellate;//扇形信息
 	Circle circle_out;//外圆形（大）信息
@@ -62,7 +63,10 @@ public:
 	//将二进制的vector转成整数
 	int BinToInt(const vector<int>& bin, int N);
 	//绘制一张CCT图像
-	void DrawACCT();
+	cv::Mat DrawACCT();
+	void DrawaCCT();
+	vector<cv::Mat> DrawcCTs();
+	void DrawCCTs();
 private:
 	CCTInfo cct_infor;
 };

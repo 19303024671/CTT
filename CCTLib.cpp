@@ -13,6 +13,11 @@ DrawCCT::DrawCCT(const CCTInfo& cct_info_)
 	this->cct_infor.Init();
 	this->cct_infor.bin = IntToBin(cct_infor.num,
 		cct_infor.N);
+	//计算N位二进制表示的最大十进制
+	vector<int>max_bin;
+	for (int i = 0; i < cct_infor.N; i++)
+		max_bin.push_back(1);
+	this->cct_infor.max_num = BinToInt(max_bin, cct_infor.N);
 }
 
 DrawCCT::~DrawCCT()
@@ -57,29 +62,8 @@ int DrawCCT::BinToInt(const vector<int>& bin, int N)
 	return num;
 }
 
-void DrawCCT::DrawACCT()
+cv::Mat DrawCCT::DrawACCT()
 {
-	//创建文件夹与文件路径
-	if (!fs::exists(cct_infor.dir_path))
-	{
-		if (!fs::create_directory(cct_infor.dir_path))
-		{
-			cerr << "创建文件夹：" << cct_infor.dir_path <<
-				"失败！" << endl;
-			return;
-		}
-	}
-	string file_name = to_string(cct_infor.num) +
-		string(".png");
-	string file_path = cct_infor.dir_path + file_name;
-	if (fs::exists(file_path))
-	{
-		cout << "文件：" << file_path << 
-			"已存在！\n是否覆盖：(y/n)\n";
-		string temp;
-		cin >> temp;
-		if (temp == "n") return;
-	}
 	//创建绘图画布
 	cv::Mat image(cct_infor.size, cct_infor.size, CV_8UC3);
 	switch (cct_infor.color)
@@ -124,8 +108,87 @@ void DrawCCT::DrawACCT()
 		cct_infor.circle_in.radius,
 		cct_infor.circle_in.color,
 		cct_infor.circle_in.thickness);
+	return image;
+}
+
+void DrawCCT::DrawaCCT()
+{
+	//创建文件夹
+	if (!fs::exists(cct_infor.dir_path))
+	{
+		if (!fs::create_directory(cct_infor.dir_path))
+		{
+			cerr << "创建文件夹：" << cct_infor.dir_path <<
+				"失败！" << endl;
+			return;
+		}
+	}
+	string file_name = to_string(cct_infor.num) +
+		string(".png");
+	string file_path = cct_infor.dir_path + file_name;
+	if (fs::exists(file_path))
+	{
+		cout << "文件：" << file_path <<
+			"已存在！\n是否覆盖：(y/n)\n";
+		string temp;
+		cin >> temp;
+		if (temp == "n") return;
+	}
 	//保存绘制的图片
-	cv::imwrite(file_path, image);
+	cv::imwrite(file_path, DrawACCT());
+}
+
+vector<cv::Mat> DrawCCT::DrawcCTs()
+{
+	vector<cv::Mat> images;
+	for (int i = 0; i < cct_infor.max_num; i++)
+	{
+		CCTInfo cct_info_temp = cct_infor;
+		cct_info_temp.num = i;
+		cct_info_temp.Init();
+		DrawCCT draw_cct_temp(cct_info_temp);
+		images.push_back(draw_cct_temp.DrawACCT());
+	}
+	return images;
+}
+
+void DrawCCT::DrawCCTs()
+{
+	//创建文件夹
+	if (!fs::exists(cct_infor.dir_path))
+	{
+		if (!fs::create_directory(cct_infor.dir_path))
+		{
+			cerr << "创建文件夹：" << cct_infor.dir_path <<
+				"失败！" << endl;
+			return;
+		}
+	}
+	//创建文件路径vector
+	vector<string> file_paths;
+	for (int i = 0; i < cct_infor.max_num; i++)
+	{
+		string file_name = to_string(i) +
+			string(".png");
+		string file_path = cct_infor.dir_path + file_name;
+		if (fs::exists(file_path))
+		{
+			cout << "文件：" << file_path <<
+				"已存在！\n是否覆盖：(y/n)\n";
+			string temp;
+			cin >> temp;
+			if (temp == "n") return;
+		}
+		file_paths.push_back(file_path);
+	}
+	//循环绘制所有图片
+	vector<cv::Mat>images = DrawcCTs();
+	int k = 0;
+	for (auto& file_path : file_paths)
+	{
+		cv::imwrite(file_path, images[k]);
+		k += 1;
+	}
 }
 
 void CCTInfo::Init()
