@@ -59,7 +59,7 @@ int DrawCCT::BinToInt(const vector<int>& bin, int N)
 
 void DrawCCT::DrawACCT()
 {
-	//创建文件夹
+	//创建文件夹与文件路径
 	if (!fs::exists(cct_infor.dir_path))
 	{
 		if (!fs::create_directory(cct_infor.dir_path))
@@ -124,9 +124,8 @@ void DrawCCT::DrawACCT()
 		cct_infor.circle_in.radius,
 		cct_infor.circle_in.color,
 		cct_infor.circle_in.thickness);
-	cv::imshow("完全体", image);
-	cv::waitKey(0);
-
+	//保存绘制的图片
+	cv::imwrite(file_path, image);
 }
 
 void CCTInfo::Init()
