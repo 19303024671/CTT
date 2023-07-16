@@ -15,6 +15,15 @@ enum CCTColor
 	black = 1,
 	white = 0	
 };
+//识别环形码所需的信息
+struct DetectCCTInfo
+{
+	string dir_path;//环形码所在的文件夹路径
+	vector<string> img_file_paths;//路径下所有图片文件路径
+	CCTColor color;//环形码的颜色
+public:
+	void Init();
+};
 //扇形
 struct Flabellate
 {
@@ -67,7 +76,19 @@ public:
 	void DrawaCCT();
 	vector<cv::Mat> DrawcCTs();
 	void DrawCCTs();
+	void DrawCCTsOnAPic();
 private:
 	CCTInfo cct_infor;
 };
+class DetectCCT
+{
+public:
+	DetectCCT();
+	~DetectCCT();
+
+private:
+
+};
+
+
 

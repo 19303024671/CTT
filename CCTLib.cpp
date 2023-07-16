@@ -113,16 +113,6 @@ cv::Mat DrawCCT::DrawACCT()
 
 void DrawCCT::DrawaCCT()
 {
-	//创建文件夹
-	if (!fs::exists(cct_infor.dir_path))
-	{
-		if (!fs::create_directory(cct_infor.dir_path))
-		{
-			cerr << "创建文件夹：" << cct_infor.dir_path <<
-				"失败！" << endl;
-			return;
-		}
-	}
 	string file_name = to_string(cct_infor.num) +
 		string(".png");
 	string file_path = cct_infor.dir_path + file_name;
@@ -154,16 +144,6 @@ vector<cv::Mat> DrawCCT::DrawcCTs()
 
 void DrawCCT::DrawCCTs()
 {
-	//创建文件夹
-	if (!fs::exists(cct_infor.dir_path))
-	{
-		if (!fs::create_directory(cct_infor.dir_path))
-		{
-			cerr << "创建文件夹：" << cct_infor.dir_path <<
-				"失败！" << endl;
-			return;
-		}
-	}
 	//创建文件路径vector
 	vector<string> file_paths;
 	for (int i = 0; i < cct_infor.max_num; i++)
@@ -191,6 +171,43 @@ void DrawCCT::DrawCCTs()
 	}
 }
 
+void DrawCCT::DrawCCTsOnAPic()
+{
+	vector<cv::Mat> imgs = DrawcCTs();
+	int pic_rows = int(sqrt(cct_infor.max_num)) + 1;
+	int pic_cols = pic_rows;
+	for (const auto& img : imgs)
+	{
+		if (img.empty())
+		{
+			cerr << "图片加载失败！" << endl;
+			return;
+		}
+	}
+	int pic_width = pic_cols * cct_infor.size;
+	int pic_height = pic_rows * cct_infor.size;
+	cv::Mat merged_img(pic_height, pic_width,
+		imgs[0].type());
+	int offsetX = 0;
+	int offsetY = 0;
+	for (const auto& img : imgs)
+	{
+		img.copyTo(merged_img(cv::Rect(offsetX, offsetY,
+			img.cols, img.rows)));
+		offsetX += img.cols;
+		if (offsetX >= pic_width)
+		{
+			offsetY += img.rows;
+			offsetX = 0;
+		}
+	}
+	string merged_img_path = cct_infor.dir_path +
+		string("merged_img_") + to_string(
+			cct_infor.max_num) + string(".png");
+	cout<<(cv::imwrite(merged_img_path, merged_img));
+	return;
+}
+
 void CCTInfo::Init()
 {
 	flabellate.center = cv::Point(size / 2, size / 2);
@@ -202,14 +219,14 @@ void CCTInfo::Init()
 	switch (color)
 	{
 	case black:
-		dir_path = string("./CCT_IMG_") + to_string(N)
+		dir_path = string("E:/source/repos/main/CCT_IMG_") + to_string(N)
 			+ string("_Black/");	
 		flabellate.color = cv::Scalar(0, 0, 0);
 		circle_in.color = cv::Scalar(0, 0, 0);
 		circle_out.color = cv::Scalar(255, 255, 255);
 		break;
 	case white:
-		dir_path = string("./CCT_IMG_") + to_string(N)
+		dir_path = string("E:/source/repos/main/CCT_IMG_") + to_string(N)
 			+ string("_White/");
 		flabellate.color = cv::Scalar(255, 255, 255);
 		circle_in.color = cv::Scalar(255, 255, 255);
@@ -217,6 +234,16 @@ void CCTInfo::Init()
 		break;
 	default:
 		break;
+	}
+	//创建文件夹
+	if (!fs::exists(dir_path))
+	{
+		if (!fs::create_directory(dir_path))
+		{
+			cerr << "创建文件夹：" << dir_path <<
+				"失败！" << endl;
+			return;
+		}
 	}
 }
 
@@ -230,3 +257,22 @@ CCTInfo::CCTInfo()
 {
 }
 
+void DetectCCTInfo::Init()
+{
+	for (const auto& file_path :
+		fs::directory_iterator(dir_path))
+	{
+		if (fs::is_regular_file(file_path))
+		{
+			fs::path file(file_path);
+			if (file.extension().string() == ".jpg" ||
+				file.extension().string() == ".JPG" ||
+				file.extension().string() == "png" ||
+				file.extension().string() == "PNG")
+			{
+				img_file_paths.push_back(file_path.
+					path().string());
+			}
+		}
+	}
+}
