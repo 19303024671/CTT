@@ -79,11 +79,11 @@ cv::Mat DrawCCT::DrawACCT()
 		break;
 	}
 	//绘制一个圆周
-	Circle circle = cct_infor.circle_in;
-	circle.thickness = 2;
-	circle.radius = cct_infor.flabellate.radius;
-	cv::circle(image, circle.center, circle.radius,
-		circle.color, circle.thickness);
+	Circle circlel1 = cct_infor.circle_in;
+	circlel1.thickness = 1;
+	circlel1.radius = cct_infor.flabellate.radius;
+	cv::circle(image, circlel1.center, circlel1.radius,
+		circlel1.color, circlel1.thickness);
 	//绘制扇形
 	double unit_angle = 360.0 / cct_infor.N;//单位角度
 	int k = 0;
@@ -103,6 +103,12 @@ cv::Mat DrawCCT::DrawACCT()
 		cct_infor.circle_out.radius,
 		cct_infor.circle_out.color,
 		cct_infor.circle_out.thickness);
+	//再绘制一个圆周
+	Circle circlel2 = cct_infor.circle_in;
+	circlel2.thickness = 1;
+	circlel2.radius = cct_infor.circle_out.radius;
+	cv::circle(image, circlel2.center, circlel2.radius,
+		circlel2.color, circlel2.thickness);
 	//绘制内小圆
 	cv::circle(image, cct_infor.circle_in.center,
 		cct_infor.circle_in.radius,
@@ -116,14 +122,6 @@ void DrawCCT::DrawaCCT()
 	string file_name = to_string(cct_infor.num) +
 		string(".png");
 	string file_path = cct_infor.dir_path + file_name;
-	if (fs::exists(file_path))
-	{
-		cout << "文件：" << file_path <<
-			"已存在！\n是否覆盖：(y/n)\n";
-		string temp;
-		cin >> temp;
-		if (temp == "n") return;
-	}
 	//保存绘制的图片
 	cv::imwrite(file_path, DrawACCT());
 }
@@ -151,14 +149,6 @@ void DrawCCT::DrawCCTs()
 		string file_name = to_string(i) +
 			string(".png");
 		string file_path = cct_infor.dir_path + file_name;
-		if (fs::exists(file_path))
-		{
-			cout << "文件：" << file_path <<
-				"已存在！\n是否覆盖：(y/n)\n";
-			string temp;
-			cin >> temp;
-			if (temp == "n") return;
-		}
 		file_paths.push_back(file_path);
 	}
 	//循环绘制所有图片
@@ -265,14 +255,77 @@ void DetectCCTInfo::Init()
 		if (fs::is_regular_file(file_path))
 		{
 			fs::path file(file_path);
+			string s = file.extension().string();
 			if (file.extension().string() == ".jpg" ||
 				file.extension().string() == ".JPG" ||
-				file.extension().string() == "png" ||
-				file.extension().string() == "PNG")
+				file.extension().string() == ".png" ||
+				file.extension().string() == ".PNG")
 			{
 				img_file_paths.push_back(file_path.
 					path().string());
 			}
 		}
 	}
+}
+
+DetectCCTInfo::DetectCCTInfo(const string& dir_path_,
+	const CCTColor& color_) :dir_path(dir_path_), color(color_)
+{
+}
+
+DetectCCTInfo::DetectCCTInfo()
+{
+}
+
+DetectCCT::DetectCCT(const DetectCCTInfo& detect_cct_info_ )
+{
+	detect_cct_info = detect_cct_info_;
+	detect_cct_info.Init();
+}
+
+DetectCCT::~DetectCCT()
+{
+}
+
+vector<int> DetectCCT::DetectCCTsOnAPic()
+{
+	cv::Mat color_img = cv::imread(
+		detect_cct_info.img_file_paths[0]);
+	if (color_img.empty())
+	{
+		cerr << "图片：" << detect_cct_info.
+			img_file_paths[0]
+			<< "加载失败！" << endl;
+		return vector<int>(-1);
+	}
+	cv::Mat gray_img;
+	cv::cvtColor(color_img, gray_img,
+		cv::COLOR_BGR2GRAY);
+	cv::Mat binary_img;
+	cv::adaptiveThreshold(gray_img, binary_img, 1,
+		cv::ADAPTIVE_THRESH_MEAN_C, cv::THRESH_BINARY,
+		11, 2);
+	vector<vector<cv::Point>> contours;
+	cv::findContours(binary_img, contours,
+		cv::RETR_TREE,
+		cv::CHAIN_APPROX_NONE);
+	for (size_t i = 0; i < contours.size(); i++)
+	{
+		if (contours[i].size() >= 20)
+		{
+			cv::RotatedRect ellipse_rect = cv::fitEllipse(
+				contours[i]
+			);
+			double area = cv::contourArea(contours[i]);
+			double perimeter = cv::arcLength(contours[i], true);
+			double circularuty = (4.0 * CV_PI * area) 
+				/ (perimeter * perimeter);
+			if (circularuty < 0.8) continue;
+			cv::ellipse(color_img, ellipse_rect,
+				cv::Scalar(0, 0, 255), 1);
+		}
+	}
+	cv::imshow("轮廓检测", color_img);
+	cv::waitKey(0);
+	return vector<int>(0);
 }

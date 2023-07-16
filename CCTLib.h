@@ -23,6 +23,8 @@ struct DetectCCTInfo
 	CCTColor color;//环形码的颜色
 public:
 	void Init();
+	DetectCCTInfo(const string& dir_path_, const CCTColor& color_);
+	DetectCCTInfo();
 };
 //扇形
 struct Flabellate
@@ -83,11 +85,12 @@ private:
 class DetectCCT
 {
 public:
-	DetectCCT();
+	DetectCCT(const DetectCCTInfo& detect_cct_info_);
 	~DetectCCT();
+	vector<int> DetectCCTsOnAPic();
 
 private:
-
+	DetectCCTInfo detect_cct_info;
 };
 
 
