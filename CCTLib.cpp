@@ -354,7 +354,7 @@ vector<int> DetectCCT::DetectCCTsOnAPic()
 		cv::Size2f(e.size.width * 4, e.size.height * 4),
 		e.angle));
 	}
-	//仿射变换变成正圆
+
 	vector<cv::Mat> cct_imgs_after_tran;
 	for (size_t i = 0; i < ellipse_rects_c3.size(); i++)
 	{
@@ -368,10 +368,22 @@ vector<int> DetectCCT::DetectCCTsOnAPic()
 		//裁剪范围
 		double row_min = round(
 			ellipse_rects_c1[i].center.y - a / 2);
+		double row_max = round(
+			ellipse_rects_c1[i].center.y + a / 2);
 		double col_min = round(
-			ellipse_rects_c1[i].center.y - a / 2);
+			ellipse_rects_c1[i].center.x - a / 2);
 		double col_max = round(
-			ellipse_rects_c1[i].center.y - a / 2);
+			ellipse_rects_c1[i].center.x + a / 2);
+		//判断边界
+		if (row_min<0 || row_max>color_img.rows ||
+			col_min<0 || col_max>color_img.cols)
+			continue;
+		cv::Mat cct_roi = color_img(cv::Range(row_min, row_max),
+			cv::Range(col_min, col_max)
+		).clone();
+		//cct_roi相对于原始图片的偏移量
+		double dx = ellipse_rects_c1[i].center.x - a / 2;
+		double dy = ellipse_rects_c1[i].center.y - a / 2;
 	}
 	cv::imshow("仿射变换后的图像", cct_imgs_after_tran[0]);
 	cv::waitKey(0);
