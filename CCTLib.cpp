@@ -354,36 +354,41 @@ vector<int> DetectCCT::DetectCCTsOnAPic()
 		cv::Size2f(e.size.width * 4, e.size.height * 4),
 		e.angle));
 	}
-
+	//剪切图像
+	vector<cv::Mat> cct_imgs;
+	for (const auto&e:ellipse_rects_c3)
+	{
+		cv::Rect bounding_rect = e.boundingRect();
+		cv::Mat cropped_img;
+		cv::getRectSubPix(color_img, bounding_rect.size(), e.center, cropped_img);
+		cct_imgs.push_back(cropped_img);
+	}
+	//仿射变换
 	vector<cv::Mat> cct_imgs_after_tran;
 	for (size_t i = 0; i < ellipse_rects_c3.size(); i++)
 	{
-		cv::RotatedRect temp_rect = ellipse_rects_c3[i];
-		//最外层椭圆最小外接矩形
-		cv::Rect temp_bounding_rect = 
-			ellipse_rects_c3[i].boundingRect();
-		//椭圆长轴
-		double a = max(temp_rect.size.width / 2,
-			temp_rect.size.height / 2);
-		//裁剪范围
-		double row_min = round(
-			ellipse_rects_c1[i].center.y - a / 2);
-		double row_max = round(
-			ellipse_rects_c1[i].center.y + a / 2);
-		double col_min = round(
-			ellipse_rects_c1[i].center.x - a / 2);
-		double col_max = round(
-			ellipse_rects_c1[i].center.x + a / 2);
-		//判断边界
-		if (row_min<0 || row_max>color_img.rows ||
-			col_min<0 || col_max>color_img.cols)
-			continue;
-		cv::Mat cct_roi = color_img(cv::Range(row_min, row_max),
-			cv::Range(col_min, col_max)
-		).clone();
-		//cct_roi相对于原始图片的偏移量
-		double dx = ellipse_rects_c1[i].center.x - a / 2;
-		double dy = ellipse_rects_c1[i].center.y - a / 2;
+		// 获取椭圆的长轴长度和短轴长度
+		float majorAxis = rotatedRect.size.width / 2.0f;
+		float minorAxis = rotatedRect.size.height / 2.0f;
+
+		// 将椭圆中心平移到图像的中心
+		cv::Mat translationMatrix = cv::Mat::eye(2, 3, CV_32F);
+		translationMatrix.at<float>(0, 2) = img.cols / 2.0f - rotatedRect.center.x;
+		translationMatrix.at<float>(1, 2) = img.rows / 2.0f - rotatedRect.center.y;
+
+		// 计算仿射变换矩阵，使得长轴和短轴长度相等，从而将椭圆变为正圆
+		float scale = majorAxis / minorAxis;
+		cv::Mat rotationMatrix = cv::getRotationMatrix2D(cv::Point2f(img.cols / 2.0f, img.rows / 2.0f), 0, scale);
+
+		// 组合仿射变换矩阵
+		cv::Mat affineMatrix = rotationMatrix * translationMatrix;
+
+		// 应用仿射变换，将椭圆区域变换为正圆
+		cv::Mat transformedImg;
+		cv::warpAffine(img, transformedImg, affineMatrix, img.size());
+
+		// 保存变换后的图像
+		cv::imwrite("transformed_image.jpg", transformedImg);
 	}
 	cv::imshow("仿射变换后的图像", cct_imgs_after_tran[0]);
 	cv::waitKey(0);
