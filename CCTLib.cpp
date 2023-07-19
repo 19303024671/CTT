@@ -269,7 +269,7 @@ void DetectCCTInfo::Init()
 }
 
 DetectCCTInfo::DetectCCTInfo(const string& dir_path_,
-	const CCTColor& color_) :dir_path(dir_path_), color(color_)
+	const CCTColor& color_,const int&N_) :dir_path(dir_path_), color(color_),N(N_)
 {
 }
 
@@ -290,7 +290,7 @@ DetectCCT::~DetectCCT()
 vector<int> DetectCCT::DetectCCTsOnAPic()
 {
 	cv::Mat color_img = cv::imread(
-		detect_cct_info.img_file_paths[0]);
+		detect_cct_info.img_file_paths[1]);
 	if (color_img.empty())
 	{
 		cerr << "图片：" << detect_cct_info.
@@ -354,43 +354,92 @@ vector<int> DetectCCT::DetectCCTsOnAPic()
 		cv::Size2f(e.size.width * 4, e.size.height * 4),
 		e.angle));
 	}
-	//剪切图像
-	vector<cv::Mat> cct_imgs;
+	vector<cv::Mat> cct_imgs;//剪切图像
+	vector<cv::RotatedRect> ellipse_rects_c3_1;//剪切图像上的椭圆轮廓
 	for (const auto&e:ellipse_rects_c3)
 	{
+		//剪切图像
 		cv::Rect bounding_rect = e.boundingRect();
 		cv::Mat cropped_img;
 		cv::getRectSubPix(color_img, bounding_rect.size(), e.center, cropped_img);
 		cct_imgs.push_back(cropped_img);
+		//剪切图像上的椭圆轮廓
+		cv::RotatedRect temp = e;
+		temp.center.x -= bounding_rect.x;
+		temp.center.y -= bounding_rect.y;
+		ellipse_rects_c3_1.push_back(temp);
 	}
-	//仿射变换
 	vector<cv::Mat> cct_imgs_after_tran;
+	vector<int>result;
 	for (size_t i = 0; i < ellipse_rects_c3.size(); i++)
 	{
-		// 获取椭圆的长轴长度和短轴长度
-		float majorAxis = rotatedRect.size.width / 2.0f;
-		float minorAxis = rotatedRect.size.height / 2.0f;
-
-		// 将椭圆中心平移到图像的中心
-		cv::Mat translationMatrix = cv::Mat::eye(2, 3, CV_32F);
-		translationMatrix.at<float>(0, 2) = img.cols / 2.0f - rotatedRect.center.x;
-		translationMatrix.at<float>(1, 2) = img.rows / 2.0f - rotatedRect.center.y;
-
-		// 计算仿射变换矩阵，使得长轴和短轴长度相等，从而将椭圆变为正圆
-		float scale = majorAxis / minorAxis;
-		cv::Mat rotationMatrix = cv::getRotationMatrix2D(cv::Point2f(img.cols / 2.0f, img.rows / 2.0f), 0, scale);
-
-		// 组合仿射变换矩阵
-		cv::Mat affineMatrix = rotationMatrix * translationMatrix;
-
-		// 应用仿射变换，将椭圆区域变换为正圆
-		cv::Mat transformedImg;
-		cv::warpAffine(img, transformedImg, affineMatrix, img.size());
-
-		// 保存变换后的图像
-		cv::imwrite("transformed_image.jpg", transformedImg);
+		//仿射变换
+		cv::RotatedRect temp_rotate_rect = ellipse_rects_c3_1[i];
+		cv::Mat img = cct_imgs[i];
+		float major_axis = temp_rotate_rect.size.width / 2.0f;
+		float minor_axis = temp_rotate_rect.size.height / 2.0f;
+		float angle = temp_rotate_rect.angle;
+		cv::Point2f center = temp_rotate_rect.center;
+		float scale = major_axis / minor_axis;
+		cv::Mat rotation_matrix = cv::getRotationMatrix2D(
+			center,
+			-angle,
+			1/scale);
+		cv::Mat transformed_img;
+		cv::warpAffine(img, transformed_img, rotation_matrix, 
+			img.size());
+		//缩放
+		cv::Mat large_img;
+		cv::resize(transformed_img, large_img, cv::Size(200,200),cv::INTER_LANCZOS4);
+		//灰度化
+		cv::Mat gray_img;
+		cv::cvtColor(large_img,
+			gray_img,
+			cv::COLOR_BGR2GRAY);
+		//腐蚀
+		cv::Mat kernel = cv::getStructuringElement(
+			cv::MORPH_RECT, 
+			cv::Size(3, 3)
+		);
+		cv::Mat eroded_img;
+		cv::erode(gray_img, eroded_img, kernel);
+		cct_imgs_after_tran.push_back(eroded_img);
+		//采样解码
+		cv::Point cct_center(100, 100);
+		int unite_angle = 360 / detect_cct_info.N;
+		for (size_t n = 0; n < detect_cct_info.N; n++)
+		{
+			vector<int> re_a;
+			for (size_t i = 40; i < 81; i++)
+			{
+				int row = round(
+					cct_center.y - i * sin(
+						(n* unite_angle+0.5*unite_angle)* PI / 180
+					)
+				);
+				int col = round(
+					cct_center.x + i * cos(
+						(n * unite_angle + 0.5 * unite_angle) * PI / 180
+					)
+				);
+				uchar* data = eroded_img.ptr<uchar>(row); 
+				int intensity = data[col];
+				re_a.push_back(
+					intensity);
+			}
+			int sum = 0;
+			for (const auto& r : re_a)
+				sum += r;
+			sum /= re_a.size();
+			(sum > 125) ? sum = 0 : sum = 1;
+			result.push_back(sum);
+		}
 	}
-	cv::imshow("仿射变换后的图像", cct_imgs_after_tran[0]);
-	cv::waitKey(0);
-	return vector<int>(0);
+	reverse(result.begin(), result.end());
+	return result;
+}
+
+int DetectCCT::GetInt(const vector<int>& bin_result)
+{
+	return DrawCCT::BinToInt(bin_result,detect_cct_info.N);
 }

@@ -1,10 +1,12 @@
 #pragma once
+#define PI 3.1415926
 
 #include<iostream>
 #include<string>
 #include<vector>
 #include<filesystem>
 #include<opencv2/opencv.hpp>
+
 
 using namespace std;
 namespace fs = std::filesystem;
@@ -21,9 +23,10 @@ struct DetectCCTInfo
 	string dir_path;//环形码所在的文件夹路径
 	vector<string> img_file_paths;//路径下所有图片文件路径
 	CCTColor color;//环形码的颜色
+	int N;//编码位数
 public:
 	void Init();
-	DetectCCTInfo(const string& dir_path_, const CCTColor& color_);
+	DetectCCTInfo(const string& dir_path_, const CCTColor& color_ , const int&N_);
 	DetectCCTInfo();
 };
 //扇形
@@ -72,7 +75,7 @@ public:
 	//将整数转成二进制vector
 	vector<int> IntToBin( int num,const int& N);
 	//将二进制的vector转成整数
-	int BinToInt(const vector<int>& bin, int N);
+	static int BinToInt(const vector<int>& bin, int N);
 	//绘制一张CCT图像
 	cv::Mat DrawACCT();
 	void DrawaCCT();
@@ -88,7 +91,7 @@ public:
 	DetectCCT(const DetectCCTInfo& detect_cct_info_);
 	~DetectCCT();
 	vector<int> DetectCCTsOnAPic();
-
+	int GetInt(const vector<int>&bin_result);
 private:
 	DetectCCTInfo detect_cct_info;
 };
