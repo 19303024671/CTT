@@ -325,7 +325,8 @@ vector<int> DetectCCT::DetectCCTsOnAPic()
 			ellipse_rects.push_back(ellipse_rect);
 		}
 	}
-	vector<cv::RotatedRect> ellipse_rects_new;
+	//最里面的轮廓
+	vector<cv::RotatedRect> ellipse_rects_c1;
 	for (const auto& e : ellipse_rects)
 	{
 		for (const auto& p : ellipse_rects)
@@ -334,20 +335,45 @@ vector<int> DetectCCT::DetectCCTsOnAPic()
 			double y = e.center.y - p.center.y;
 			if (sqrt(pow(x,2)+pow(y,2))<=5)
 			{
-				ellipse_rects_new.push_back(
+				ellipse_rects_c1.push_back(
 					(e.size.area() > p.size.area()) ? 
 					e : p
 				);
 			}
-		}
-		
+		}		
 	}
-	for (const auto& e : ellipse_rects_new)
+	//扩充轮廓，得到外面两层轮廓
+	vector<cv::RotatedRect> ellipse_rects_c2;
+	vector<cv::RotatedRect> ellipse_rects_c3;
+	for (const auto& e : ellipse_rects_c1)
 	{
-		cv::ellipse(color_img, e,
-			cv::Scalar(0, 0, 255), 2);
+	ellipse_rects_c2.push_back(cv::RotatedRect(e.center,
+			cv::Size2f(e.size.width * 2, e.size.height * 2),
+			e.angle));
+	ellipse_rects_c3.push_back(cv::RotatedRect(e.center,
+		cv::Size2f(e.size.width * 4, e.size.height * 4),
+		e.angle));
 	}
-	cv::imshow("第一个轮廓", color_img);
+	//仿射变换变成正圆
+	vector<cv::Mat> cct_imgs_after_tran;
+	for (size_t i = 0; i < ellipse_rects_c3.size(); i++)
+	{
+		cv::RotatedRect temp_rect = ellipse_rects_c3[i];
+		//最外层椭圆最小外接矩形
+		cv::Rect temp_bounding_rect = 
+			ellipse_rects_c3[i].boundingRect();
+		//椭圆长轴
+		double a = max(temp_rect.size.width / 2,
+			temp_rect.size.height / 2);
+		//裁剪范围
+		double row_min = round(
+			ellipse_rects_c1[i].center.y - a / 2);
+		double col_min = round(
+			ellipse_rects_c1[i].center.y - a / 2);
+		double col_max = round(
+			ellipse_rects_c1[i].center.y - a / 2);
+	}
+	cv::imshow("仿射变换后的图像", cct_imgs_after_tran[0]);
 	cv::waitKey(0);
 	return vector<int>(0);
 }
