@@ -309,6 +309,7 @@ vector<int> DetectCCT::DetectCCTsOnAPic()
 	cv::findContours(binary_img, contours,
 		cv::RETR_TREE,
 		cv::CHAIN_APPROX_NONE);
+	vector<cv::RotatedRect> ellipse_rects;
 	for (size_t i = 0; i < contours.size(); i++)
 	{
 		if (contours[i].size() >= 20)
@@ -321,11 +322,32 @@ vector<int> DetectCCT::DetectCCTsOnAPic()
 			double circularuty = (4.0 * CV_PI * area) 
 				/ (perimeter * perimeter);
 			if (circularuty < 0.8) continue;
-			cv::ellipse(color_img, ellipse_rect,
-				cv::Scalar(0, 0, 255), 1);
+			ellipse_rects.push_back(ellipse_rect);
 		}
 	}
-	cv::imshow("轮廓检测", color_img);
+	vector<cv::RotatedRect> ellipse_rects_new;
+	for (const auto& e : ellipse_rects)
+	{
+		for (const auto& p : ellipse_rects)
+		{
+			double x = e.center.x - p.center.x;
+			double y = e.center.y - p.center.y;
+			if (sqrt(pow(x,2)+pow(y,2))<=5)
+			{
+				ellipse_rects_new.push_back(
+					(e.size.area() > p.size.area()) ? 
+					e : p
+				);
+			}
+		}
+		
+	}
+	for (const auto& e : ellipse_rects_new)
+	{
+		cv::ellipse(color_img, e,
+			cv::Scalar(0, 0, 255), 2);
+	}
+	cv::imshow("第一个轮廓", color_img);
 	cv::waitKey(0);
 	return vector<int>(0);
 }
