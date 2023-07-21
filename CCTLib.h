@@ -101,3 +101,5 @@ vector<int> IntToBin(const int& num_,const int&N);
 cv::Mat DrawCCTsOnAPic(const CCTInfo& cct_info);
 
 vector<int> MoveBit(const vector<int>& bin);
+
+bool IsIn(const cv::RotatedRect& temp_r,const vector<cv::RotatedRect> & ellipse_rects_c1);

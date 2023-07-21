@@ -116,6 +116,21 @@ vector<int> MoveBit(const vector<int>& bin)
 	return temp;
 }
 
+bool IsIn(const cv::RotatedRect& temp_r, const vector<cv::RotatedRect>& ellipse_rects_c1)
+{
+	if (ellipse_rects_c1.size() == 0) return false;
+	for (const auto& p : ellipse_rects_c1)
+	{
+		double x = p.center.x - temp_r.center.x;
+		double y = p.center.y - temp_r.center.y;
+		if (sqrt(pow(x, 2) + pow(y, 2)) <= 10)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
 vector<int> DecodeCCT(const DetectCCTInfo& detect_cct_info)
 {
 	//读取图片
@@ -157,33 +172,46 @@ vector<int> DecodeCCT(const DetectCCTInfo& detect_cct_info)
 			ellipse_rects.push_back(ellipse_rect);
 		}
 	}
-	//提取最里面的椭圆轮廓
-	vector<cv::RotatedRect> ellipse_rects_c1;
-	for (const auto& e : ellipse_rects)
+	//提取最外面的椭圆轮廓
+	vector<cv::RotatedRect> ellipse_rects_c3;
+	for (size_t i = 0; i < ellipse_rects.size(); i++)
 	{
-		for (const auto& p : ellipse_rects)
+		vector<cv::RotatedRect> temp;
+		temp.push_back(ellipse_rects[i]);
+		for (size_t j = i+1; j < ellipse_rects.size(); j++)
 		{
-			double x = e.center.x - p.center.x;
-			double y = e.center.y - p.center.y;
-			if (sqrt(pow(x, 2) + pow(y, 2)) <= 5)
+			double x = ellipse_rects[i].center.x - ellipse_rects[j].center.x;
+			double y = ellipse_rects[i].center.y - ellipse_rects[j].center.y;
+			if (sqrt(pow(x, 2) + pow(y, 2)) <= 10)
 			{
-				ellipse_rects_c1.push_back(
-					(e.size.area() > p.size.area()) ?
-					e : p
-				);
+				temp.push_back(ellipse_rects[j]);
+
 			}
 		}
+		cv::RotatedRect temp_r= temp[0];
+		if (IsIn(temp_r, ellipse_rects_c3)) continue;
+		for (const auto& e : temp)
+		{
+			if (e.size.area() > temp_r.size.area())
+			{
+				temp_r = e;
+			}
+		}
+		ellipse_rects_c3.push_back(temp_r);					
 	}
-	//扩充轮廓，得到外面两层椭圆轮廓
+	for (const auto&e:ellipse_rects_c3)
+	{
+		cv::ellipse(color_img, e, cv::Scalar(0, 0, 255), 1);
+	}
+	vector<cv::RotatedRect> ellipse_rects_c1;
 	vector<cv::RotatedRect> ellipse_rects_c2;
-	vector<cv::RotatedRect> ellipse_rects_c3;
-	for (const auto& e : ellipse_rects_c1)
+	for (const auto& e : ellipse_rects_c3)
 	{
 		ellipse_rects_c2.push_back(cv::RotatedRect(e.center,
-			cv::Size2f(e.size.width * 2, e.size.height * 2),
+			cv::Size2f(e.size.width / 2, e.size.height / 2),
 			e.angle));
-		ellipse_rects_c3.push_back(cv::RotatedRect(e.center,
-			cv::Size2f(e.size.width * 4, e.size.height * 4),
+		ellipse_rects_c1.push_back(cv::RotatedRect(e.center,
+			cv::Size2f(e.size.width / 4, e.size.height / 4),
 			e.angle));
 	}
 	vector<cv::Mat> cct_imgs;//剪切图像
@@ -210,21 +238,21 @@ vector<int> DecodeCCT(const DetectCCTInfo& detect_cct_info)
 		cv::Mat eroded_img;
 		//前处理剪切下的图像
 		{
-			//仿射变换
-			cv::RotatedRect temp_rotate_rect = ellipse_rects_c3_1[i];
+			////仿射变换
+			//cv::RotatedRect temp_rotate_rect = ellipse_rects_c3_1[i];
 			cv::Mat img = cct_imgs[i];
-			float major_axis = temp_rotate_rect.size.width / 2.0f;
-			float minor_axis = temp_rotate_rect.size.height / 2.0f;
-			float angle = temp_rotate_rect.angle;
-			cv::Point2f center = temp_rotate_rect.center;
-			float scale = major_axis / minor_axis;
-			cv::Mat rotation_matrix = cv::getRotationMatrix2D(
-				center,
-				-angle,
-				1 / scale);
-			cv::Mat transformed_img;
-			cv::warpAffine(img, transformed_img, rotation_matrix,
-				img.size());
+			//float major_axis = temp_rotate_rect.size.width / 2.0f;
+			//float minor_axis = temp_rotate_rect.size.height / 2.0f;
+			//float angle = temp_rotate_rect.angle;
+			//cv::Point2f center = temp_rotate_rect.center;
+			//float scale = major_axis / minor_axis;
+			//cv::Mat rotation_matrix = cv::getRotationMatrix2D(
+			//	center,
+			//	-angle,
+			//	1 / scale);
+			cv::Mat transformed_img = img;
+			//cv::warpAffine(img, transformed_img, rotation_matrix,
+			//	img.size());
 			//缩放
 			cv::Mat large_img;
 			cv::resize(transformed_img, large_img, cv::Size(200, 200), cv::INTER_LANCZOS4);
@@ -247,7 +275,7 @@ vector<int> DecodeCCT(const DetectCCTInfo& detect_cct_info)
 		for (size_t n = 0; n < detect_cct_info.N; n++)
 		{
 			vector<int> re_a;
-			for (size_t i = 40; i < 81; i++)
+			for (size_t i = 45; i < 75; i++)
 			{
 				int row = round(
 					cct_center.y - i * sin(
