@@ -105,6 +105,17 @@ cv::Mat DrawACCT(const ACCTInfo& acct_info)
 	return image;
 }
 
+vector<int> MoveBit(const vector<int>& bin)
+{
+	vector<int> temp = bin;
+	for (size_t i = 0; i < (bin.size()-1); i++)
+	{
+		temp[i] = bin[i + 1];
+	}
+	temp[bin.size()-1] = bin[0];
+	return temp;
+}
+
 vector<int> DecodeCCT(const DetectCCTInfo& detect_cct_info)
 {
 	//读取图片
@@ -267,13 +278,15 @@ vector<int> DecodeCCT(const DetectCCTInfo& detect_cct_info)
 			}
 		}
 		//绘制
+		int a_result = BinToInt(temp);
+		if (a_result == 0)
+			continue;
 		cv::ellipse(color_img, ellipse_rects_c1[i], 
 			cv::Scalar(0, 255, 0), 1);
 		cv::ellipse(color_img, ellipse_rects_c2[i],
 			cv::Scalar(0, 255, 0), 1);
 		cv::ellipse(color_img, ellipse_rects_c3[i],
 			cv::Scalar(0, 255, 0), 1);
-		int a_result = BinToInt(temp);
 		Text text(to_string(a_result), ellipse_rects_c1[i].center);
 		cv::putText(color_img, text.text, text.position, text.fontFace, text.fontScale, text.color, text.thickness, text.lineType);
 		result.push_back(BinToInt(temp));
@@ -284,14 +297,43 @@ vector<int> DecodeCCT(const DetectCCTInfo& detect_cct_info)
 
 int BinToInt(const vector<int>& bin)
 {
-	int N = bin.size();
-	int num = 0;
-	for (int i : bin)
+	vector<int> array_ = bin;
+	int min_value = 1000000;
+	int temp = 0;
+	int N = array_.size();
+	for (size_t i = 0; i < N; i++)
 	{
-		num += i * int(pow(2, N - 1));
-		N -= 1;
+		temp = 0;
+		for (size_t j = 0; j < N; j++)
+		{
+			if (array_[j]==1)
+			{
+				temp += int(pow(2, j));
+			}
+		}
+		if (temp<min_value)
+		{
+			min_value = temp;
+		}
+		array_ = MoveBit(array_);
 	}
-	return num;
+	for (size_t i = 0; i < N; i++)
+	{
+		temp = 0;
+		for (size_t j = 0; j < N; j++)
+		{
+			if (array_[j]==1)
+			{
+				temp += int(pow(2, j));
+			}
+		}
+		if (temp==min_value)
+		{
+			break;
+		}
+		array_ = MoveBit(array_);
+	}
+	return min_value;
 }
 
 Text::Text(const string& text_, 

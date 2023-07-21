@@ -98,3 +98,5 @@ vector<cv::Mat> DrawCCTs(const CCTInfo& cct_info);
 vector<int> IntToBin(const int& num_,const int&N);
 
 cv::Mat DrawCCTsOnAPic(const CCTInfo& cct_info);
+
+vector<int> MoveBit(const vector<int>& bin);
