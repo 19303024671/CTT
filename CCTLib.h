@@ -6,6 +6,7 @@
 #include<vector>
 #include<filesystem>
 #include<opencv2/opencv.hpp>
+#include"ProgressBar.hpp"
 
 
 using namespace std;

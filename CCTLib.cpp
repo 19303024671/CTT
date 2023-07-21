@@ -127,6 +127,7 @@ vector<int> DecodeCCT(const DetectCCTInfo& detect_cct_info)
 			<< "加载失败！" << endl;
 		return vector<int>( - 1);
 	}
+	cout << "读取图片成功！" << endl;
 	//图片前处理
 	cv::Mat gray_img;
 	cv::cvtColor(color_img, gray_img,
@@ -202,6 +203,7 @@ vector<int> DecodeCCT(const DetectCCTInfo& detect_cct_info)
 	}
 	vector<cv::Mat> cct_imgs_after_tran;
 	vector<int>result;
+	ProgressBar progress_bar(ellipse_rects_c3.size());
 	for (size_t i = 0; i < ellipse_rects_c3.size(); i++)
 	{
 		vector<int>temp;
@@ -269,7 +271,7 @@ vector<int> DecodeCCT(const DetectCCTInfo& detect_cct_info)
 			(sum > 125) ? sum = 0 : sum = 1;
 			temp.push_back(sum);
 		}
-		reverse(temp.begin(), temp.end());
+		//reverse(temp.begin(), temp.end());
 		if (detect_cct_info.color == white)
 		{
 			for (size_t k = 0; k < temp.size(); k++)
@@ -292,6 +294,7 @@ vector<int> DecodeCCT(const DetectCCTInfo& detect_cct_info)
 		result.push_back(BinToInt(temp));
 	}
 	cv::imwrite(detect_cct_info.file_path, color_img);
+	progress_bar.update();
 	return result;
 }
 
