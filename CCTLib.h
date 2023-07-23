@@ -103,3 +103,7 @@ cv::Mat DrawCCTsOnAPic(const CCTInfo& cct_info);
 vector<int> MoveBit(const vector<int>& bin);
 
 bool IsIn(const cv::RotatedRect& temp_r,const vector<cv::RotatedRect> & ellipse_rects_c1);
+
+cv::Mat GetTransMatrix(const cv::Mat& src, const cv::Mat& dst);
+
+cv::Point GetTransCenter(const cv::Mat& M, const cv::Point& P);

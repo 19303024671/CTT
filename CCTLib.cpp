@@ -89,12 +89,12 @@ cv::Mat DrawACCT(const ACCTInfo& acct_info)
 		circle_in_large.color,
 		circle_in_large.thickness);
 	//绘制里面的圆周
-	cv::circle(image, circlel1.center, circlel1.radius,
-		circlel1.color, circlel1.thickness);
+	//cv::circle(image, circlel1.center, circlel1.radius,
+	//	circlel1.color, circlel1.thickness);
 	//再绘制外面的圆周
-	Circle circlel2(circlel1.center, 0.4 * acct_info.size, 1, circlel1.color);
-	cv::circle(image, circlel2.center, circlel2.radius,
-		circlel2.color, circlel2.thickness);
+	//Circle circlel2(circlel1.center, 0.4 * acct_info.size, 1, circlel1.color);
+	//cv::circle(image, circlel2.center, circlel2.radius,
+	//	circlel2.color, circlel2.thickness);
 	//绘制内小圆
 	Circle circle_in_small(circlel1.center, 0.1*acct_info.size, -1, circlel1.color);
 	cv::circle(image, circle_in_small.center,
@@ -129,6 +129,53 @@ bool IsIn(const cv::RotatedRect& temp_r, const vector<cv::RotatedRect>& ellipse_
 		}
 	}
 	return false;
+}
+
+cv::Mat GetTransMatrix(const cv::Mat& src, const cv::Mat& dst)
+{
+	int m = src.rows;
+	cv::Mat A(2 * m, 6, CV_32F, cv::Scalar(0));
+	cv::Mat b(2 * m, 1, CV_32F, cv::Scalar(0));
+	for (size_t i = 0; i < m; i++)
+	{
+		for (size_t j = 0; j < 2; j++)
+		{
+			if (j==0)
+			{
+				A.at<float>(2 * i + j, 0) = src.at<float>(i, 0);
+				A.at<float>(2 * i + j, 1) = src.at<float>(i, 1);
+				A.at<float>(2 * i + j, 4) = 1;
+				b.at<float>(2 * i + j, 0) = dst.at<float>(i, 0);
+			}
+			if (j==1)
+			{
+				A.at<float>(2 * i + j, 2) = src.at<float>(i, 0);
+				A.at<float>(2 * i + j, 3) = src.at<float>(i, 1);
+				A.at<float>(2 * i + j, 5) = 1;
+				b.at<float>(2 * i + j, 0) = dst.at<float>(i, 0);
+			}
+		}
+	}
+	cv::Mat A_transponse = A.t();
+	cv::Mat AtA = A_transponse * A;
+	double det = cv::determinant(AtA);
+	if (det < 0.1) return cv::Mat();
+	cv::Mat AtA_inverse;
+	cv::invert(AtA, AtA_inverse, cv::DECOMP_LU);
+	cv::Mat x = (AtA_inverse * A_transponse) * b;
+	cv::Mat M = (cv::Mat_<float>(2, 3) <<
+		x.at<float>(0, 0), x.at<float>(1, 0), x.at<float>(4, 0),
+		x.at<float>(2, 0), x.at<float>(3, 0), x.at<float>(5, 0)
+		);
+	return M;
+}
+
+cv::Point GetTransCenter(const cv::Mat& M, const cv::Point& P)
+{
+	cv::Point center_tran;
+	center_tran.x = M.at<float>(0, 0) * P.x + M.at<float>(0, 1) * P.y + M.at<float>(0, 2);
+	center_tran.y = M.at<float>(1, 0) * P.x + M.at<float>(1, 1) * P.y + M.at<float>(1, 2);
+	return center_tran;
 }
 
 vector<int> DecodeCCT(const DetectCCTInfo& detect_cct_info)
@@ -172,8 +219,8 @@ vector<int> DecodeCCT(const DetectCCTInfo& detect_cct_info)
 			ellipse_rects.push_back(ellipse_rect);
 		}
 	}
-	//提取最外面的椭圆轮廓
-	vector<cv::RotatedRect> ellipse_rects_c3;
+	//提取椭圆轮廓
+	vector<cv::RotatedRect> ellipse_rects_c1;
 	for (size_t i = 0; i < ellipse_rects.size(); i++)
 	{
 		vector<cv::RotatedRect> temp;
@@ -189,7 +236,7 @@ vector<int> DecodeCCT(const DetectCCTInfo& detect_cct_info)
 			}
 		}
 		cv::RotatedRect temp_r= temp[0];
-		if (IsIn(temp_r, ellipse_rects_c3)) continue;
+		if (IsIn(temp_r, ellipse_rects_c1)) continue;
 		for (const auto& e : temp)
 		{
 			if (e.size.area() > temp_r.size.area())
@@ -197,21 +244,17 @@ vector<int> DecodeCCT(const DetectCCTInfo& detect_cct_info)
 				temp_r = e;
 			}
 		}
-		ellipse_rects_c3.push_back(temp_r);					
+		ellipse_rects_c1.push_back(temp_r);					
 	}
-	for (const auto&e:ellipse_rects_c3)
-	{
-		cv::ellipse(color_img, e, cv::Scalar(0, 0, 255), 1);
-	}
-	vector<cv::RotatedRect> ellipse_rects_c1;
+	vector<cv::RotatedRect> ellipse_rects_c3;
 	vector<cv::RotatedRect> ellipse_rects_c2;
-	for (const auto& e : ellipse_rects_c3)
+	for (const auto& e : ellipse_rects_c1)
 	{
 		ellipse_rects_c2.push_back(cv::RotatedRect(e.center,
-			cv::Size2f(e.size.width / 2, e.size.height / 2),
+			cv::Size2f(e.size.width * 2, e.size.height * 2),
 			e.angle));
-		ellipse_rects_c1.push_back(cv::RotatedRect(e.center,
-			cv::Size2f(e.size.width / 4, e.size.height / 4),
+		ellipse_rects_c3.push_back(cv::RotatedRect(e.center,
+			cv::Size2f(e.size.width * 4, e.size.height * 4),
 			e.angle));
 	}
 	vector<cv::Mat> cct_imgs;//剪切图像
@@ -238,21 +281,36 @@ vector<int> DecodeCCT(const DetectCCTInfo& detect_cct_info)
 		cv::Mat eroded_img;
 		//前处理剪切下的图像
 		{
-			////仿射变换
-			//cv::RotatedRect temp_rotate_rect = ellipse_rects_c3_1[i];
+			//仿射变换
 			cv::Mat img = cct_imgs[i];
-			//float major_axis = temp_rotate_rect.size.width / 2.0f;
-			//float minor_axis = temp_rotate_rect.size.height / 2.0f;
-			//float angle = temp_rotate_rect.angle;
-			//cv::Point2f center = temp_rotate_rect.center;
-			//float scale = major_axis / minor_axis;
-			//cv::Mat rotation_matrix = cv::getRotationMatrix2D(
-			//	center,
-			//	-angle,
-			//	1 / scale);
-			cv::Mat transformed_img = img;
-			//cv::warpAffine(img, transformed_img, rotation_matrix,
-			//	img.size());
+			cv::imshow("tr", img);
+			cv::waitKey(0);
+			cv::RotatedRect box1 = ellipse_rects_c1[i];
+			cv::RotatedRect box3 = ellipse_rects_c3[i];
+			cv::Mat min_rect;
+			cv::boxPoints(box1, min_rect);
+			float a = max(box3.size.height, box3.size.width);
+			float dx = box1.center.x - a / 2;
+			float dy = box1.center.y - a / 2;
+			cv::Mat src = (cv::Mat_<float>(5, 2) <<
+				min_rect.at<float>(1, 0) - dx, min_rect.at<float>(1, 1) - dy,
+				min_rect.at<float>(2, 0) - dx, min_rect.at<float>(2, 1) - dy,
+				min_rect.at<float>(3, 0) - dx, min_rect.at<float>(3, 1) - dy,
+				min_rect.at<float>(0, 0) - dx, min_rect.at<float>(0, 1) - dy,
+				box1.center.x - dx, box1.center.y - dy
+				);
+			cv::Mat dst = (cv::Mat_<float>(5, 2) <<
+				box1.center.x - a / 2 - dx, box1.center.y - a / 2 - dy,
+				box1.center.x + a / 2 - dx, box1.center.y - a / 2 - dy,
+				box1.center.x + a / 2 - dx, box1.center.y + a / 2 - dy,
+				box1.center.x - a / 2 - dx, box1.center.y + a / 1 - dy,
+				box1.center.x - dx, box1.center.y - dy
+				);
+			cv::Mat M = GetTransMatrix(src, dst);
+			if (M.empty()) continue;
+			cv::Point center_tran = GetTransCenter(M, cv::Point(box1.center.x - dx, box1.center.y - dy));
+			cv::Mat transformed_img;
+			cv::warpAffine(img, transformed_img, M, cv::Size(a, a));
 			//缩放
 			cv::Mat large_img;
 			cv::resize(transformed_img, large_img, cv::Size(200, 200), cv::INTER_LANCZOS4);
