@@ -207,7 +207,7 @@ vector<cv::RotatedRect> GetAllEs(const cv::Mat& binary_img)
 			double perimeter = cv::arcLength(contours[i], true);
 			double circularuty = (4.0 * CV_PI * area)
 				/ (perimeter * perimeter);
-			if (circularuty < 0.85) continue;
+			if (circularuty < 0.7) continue;
 			ellipse_rects.push_back(ellipse_rect);
 		}
 	}
@@ -370,8 +370,8 @@ int Decode(const int& N, const CCTColor& color,
 	const cv::RotatedRect&box2,
 	const cv::RotatedRect& box3 )
 {
-	int a = (box2.size.width + box2.size.height) / 4;
-	int b = (box3.size.width + box3.size.height) / 4;
+	int a = int((box2.size.width + box2.size.height) / 4);
+	int b = int((box3.size.width + box3.size.height) / 4);
 	cv::Mat eroded_img = erode_img;
 	//采样解码
 	cv::Point cct_center = box2.center;
