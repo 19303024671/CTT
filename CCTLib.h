@@ -131,10 +131,12 @@ cv::Mat TranImg(const cv::Mat& img,
 	const cv::RotatedRect& box1, 
 	const cv::RotatedRect& box3);
 //Ω‚¬Î
-int Decode(const int&N,const CCTColor&color,const cv::Mat &erode_img);
+int Decode(const int&N,const CCTColor&color,const cv::Mat &erode_img,
+	const cv::RotatedRect& box2,
+	const cv::RotatedRect& box3);
 //ªÊ÷∆
 void DrawResult(const int& a_result, const cv::Mat& color_img,
-	const string& file_path,
 	const cv::RotatedRect& box1,
 	const cv::RotatedRect& box2,
 	const cv::RotatedRect& box3);
+int Decode2(const int& N, const CCTColor& color, const cv::Mat& erode_img);

@@ -207,7 +207,7 @@ vector<cv::RotatedRect> GetAllEs(const cv::Mat& binary_img)
 			double perimeter = cv::arcLength(contours[i], true);
 			double circularuty = (4.0 * CV_PI * area)
 				/ (perimeter * perimeter);
-			if (circularuty < 0.8) continue;
+			if (circularuty < 0.7) continue;
 			ellipse_rects.push_back(ellipse_rect);
 		}
 	}
@@ -235,7 +235,7 @@ vector<cv::RotatedRect> Get1Es(const vector<cv::RotatedRect>& ellipse_rects)
 		if (IsIn(temp_r, ellipse_rects_c1)) continue;//判断是不是已经处理了，已经在容器里了
 		for (const auto& e : temp)
 		{
-			if (e.size.area() > temp_r.size.area())
+			if (e.size.area() >temp_r.size.area())
 			{
 				temp_r = e;//找到该组同心圆中面积最小的一个
 			}
@@ -269,10 +269,23 @@ vector<cv::Mat> CutImg(const vector<cv::RotatedRect>& e3, const cv::Mat& color_i
 	vector<cv::Mat> cct_imgs;
 	for (const auto& e : e3)
 	{
+		float a = max(e.size.width, e.size.height);
 		//剪切图像：将最外层椭圆包裹的图像从原图像中剪切下来
-		cv::Rect bounding_rect = e.boundingRect();
+		int row_min = int(round(e.center.y - a / 2));
+		int row_max = int(round(e.center.y + a / 2));
+		int col_min = int(round(e.center.x - a / 2));
+		int col_max = int(round(e.center.x + a / 2));
+		if (col_max > color_img.cols ||
+			col_min <0 ||
+			row_max>color_img.rows ||
+			row_min < 0)
+		{ 
+			cct_imgs.push_back(cv::Mat());
+			continue;
+		}
 		cv::Mat cropped_img;
-		cv::getRectSubPix(color_img, bounding_rect.size(), e.center, cropped_img);
+		cropped_img = color_img(cv::Range(row_min, row_max), 
+			cv::Range(col_min,col_max));
 		cct_imgs.push_back(cropped_img);
 	}
 	return cct_imgs;
@@ -285,18 +298,20 @@ vector<int> GetResult(const int&N,const CCTColor&color,const string&file_path,co
 	{
 		//仿射变换
 		cv::Mat img = cct_imgs[i];
+		if (img.empty()) continue;
 		cv::RotatedRect box1 = ellipse_rects_c1[i];
 		cv::RotatedRect box3 = ellipse_rects_c3[i];
+		cv::RotatedRect box2 = ellipse_rects_c2[i];
 		cv::Mat eroded_img = TranImg(img,box1,box3);//这张剪切下的图片变换后的图像
 		if (eroded_img.empty()) continue;
+
 		//解码
-		int a_result = Decode(N, color, eroded_img);
+		int a_result = Decode2(N, color, eroded_img);
 		if (a_result == 0)
 			continue;
-		cv::RotatedRect box2 = ellipse_rects_c2[i];
 		result.push_back(a_result);
 		//绘制
-		DrawResult(a_result, color_img, file_path, box1, box2, box3);
+		DrawResult(a_result, color_img, box1, box2, box3);
 	}
 	return result;
 }
@@ -336,26 +351,36 @@ cv::Mat TranImg(const cv::Mat& img, const cv::RotatedRect& box1, const cv::Rotat
 	cv::cvtColor(large_img,
 		gray_img,
 		cv::COLOR_BGR2GRAY);
+	//二值化
+	cv::Mat binary_img;
+	cv::adaptiveThreshold(gray_img, binary_img,255,
+		cv::ADAPTIVE_THRESH_GAUSSIAN_C, cv::THRESH_BINARY,
+		11,2);
 	//腐蚀
 	cv::Mat kernel = cv::getStructuringElement(
 		cv::MORPH_RECT,
 		cv::Size(3, 3)
 	);
-	cv::erode(gray_img, eroded_img, kernel);
+	cv::erode(binary_img, eroded_img, kernel);
 	return eroded_img;
 }
 
-int Decode(const int& N, const CCTColor& color, const cv::Mat& erode_img)
+int Decode(const int& N, const CCTColor& color,
+	const cv::Mat& erode_img,
+	const cv::RotatedRect&box2,
+	const cv::RotatedRect& box3 )
 {
+	int a = (box2.size.width + box2.size.height) / 4;
+	int b = (box3.size.width + box3.size.height) / 4;
 	cv::Mat eroded_img = erode_img;
 	//采样解码
-	cv::Point cct_center = cv::Point(100, 100);
+	cv::Point cct_center = box2.center;
 	int unite_angle = 360 / N;
 	vector<int>temp;
 	for (size_t n = 0; n < N; n++)
 	{
 		vector<int> re_a;
-		for (size_t i = 70; i < 100; i++)
+		for (size_t i = a;i < b; i++)
 		{
 			int row = int(round(
 				cct_center.y - i * sin(
@@ -367,6 +392,9 @@ int Decode(const int& N, const CCTColor& color, const cv::Mat& erode_img)
 					(n * unite_angle + 0.5 * unite_angle) * PI / 180
 				))
 			);
+			//cv::circle(eroded_img, cv::Point(col, row),10, cv::Scalar(0, 255, 0));
+			if (row <= 0 || row >= eroded_img.rows || col <= 0 || col >= eroded_img.cols)
+				return 0;
 			uchar* data = eroded_img.ptr<uchar>(row);
 			int intensity = data[col];
 			re_a.push_back(
@@ -391,7 +419,6 @@ int Decode(const int& N, const CCTColor& color, const cv::Mat& erode_img)
 }
 
 void DrawResult(const int& a_result, const cv::Mat& color_img,
-	const string& file_path,
 	const cv::RotatedRect& box1,
 	const cv::RotatedRect& box2,
 	const cv::RotatedRect& box3)
@@ -407,7 +434,17 @@ void DrawResult(const int& a_result, const cv::Mat& color_img,
 		text.position, text.fontFace,
 		text.fontScale, text.color, 
 		text.thickness, text.lineType);
-	cv::imwrite(file_path, color_img);
+}
+
+int Decode2(const int& N, const CCTColor& color, const cv::Mat& erode_img)
+{
+	cv::Mat img = erode_img;
+	vector<cv::RotatedRect> all = GetAllEs(img);
+	if (all.empty()) return 0;
+	vector<cv::RotatedRect> e1 = Get1Es(all);
+	vector<cv::RotatedRect> e2 = Get2_3Es(e1)[0];
+	vector<cv::RotatedRect> e3 = Get2_3Es(e1)[1];
+	return(Decode(N, color, erode_img, e2[0], e3[0]));
 }
 
 vector<int> DecodeCCT(const DetectCCTInfo& detect_cct_info)
@@ -425,6 +462,9 @@ vector<int> DecodeCCT(const DetectCCTInfo& detect_cct_info)
 	bar.update();
 	//提取里面的椭圆轮廓：ellipse_rects_c1
 	vector<cv::RotatedRect> ellipse_rects_c1 = Get1Es(ellipse_rects);
+	//cv::ellipse(binary_img, ellipse_rects[0], cv::Scalar(0, 255, 0));
+	//cv::imshow("1", binary_img);
+	//cv::waitKey(0);
 	vector<vector<cv::RotatedRect>> e23 = Get2_3Es(ellipse_rects_c1);
 	vector<cv::RotatedRect> ellipse_rects_c2 = e23[0];//中间的椭圆0.2
 	vector<cv::RotatedRect> ellipse_rects_c3 = e23[1];//最大的0.3
@@ -438,6 +478,7 @@ vector<int> DecodeCCT(const DetectCCTInfo& detect_cct_info)
 		color_img, ellipse_rects_c1,
 		ellipse_rects_c2, ellipse_rects_c3, cct_imgs);
 	bar.update();
+	cv::imwrite(detect_cct_info.file_path, color_img);
 	cout << "\n识别成功！" << endl;
 	return result;
 }
