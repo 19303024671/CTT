@@ -207,7 +207,7 @@ vector<cv::RotatedRect> GetAllEs(const cv::Mat& binary_img)
 			double perimeter = cv::arcLength(contours[i], true);
 			double circularuty = (4.0 * CV_PI * area)
 				/ (perimeter * perimeter);
-			if (circularuty < 0.7) continue;
+			if (circularuty < 0.85) continue;
 			ellipse_rects.push_back(ellipse_rect);
 		}
 	}
@@ -235,7 +235,7 @@ vector<cv::RotatedRect> Get1Es(const vector<cv::RotatedRect>& ellipse_rects)
 		if (IsIn(temp_r, ellipse_rects_c1)) continue;//判断是不是已经处理了，已经在容器里了
 		for (const auto& e : temp)
 		{
-			if (e.size.area() >temp_r.size.area())
+			if (e.size.area() <temp_r.size.area())
 			{
 				temp_r = e;//找到该组同心圆中面积最小的一个
 			}
@@ -352,10 +352,10 @@ cv::Mat TranImg(const cv::Mat& img, const cv::RotatedRect& box1, const cv::Rotat
 		gray_img,
 		cv::COLOR_BGR2GRAY);
 	//二值化
-	cv::Mat binary_img;
+	cv::Mat binary_img = large_img;
 	cv::adaptiveThreshold(gray_img, binary_img,255,
 		cv::ADAPTIVE_THRESH_GAUSSIAN_C, cv::THRESH_BINARY,
-		11,2);
+		1023,2);
 	//腐蚀
 	cv::Mat kernel = cv::getStructuringElement(
 		cv::MORPH_RECT,
