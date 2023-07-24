@@ -6,6 +6,7 @@
 #include<vector>
 #include<filesystem>
 #include<opencv2/opencv.hpp>
+#include <opencv2/core/utils/logger.hpp>
 #include"ProgressBar.hpp"
 
 
@@ -87,23 +88,53 @@ public:
 	CCTInfo(const CCTInfo& cct_info_);
 	CCTInfo();
 };
-
+//识别编码总函数
 vector<int> DecodeCCT(const DetectCCTInfo& detect_cct_info);
-
+//二进制转十进制
 int BinToInt(const vector<int>& bin);
-
+//画一张CCT
 cv::Mat DrawACCT(const ACCTInfo& acct_info);
-
+//画一批CCT
 vector<cv::Mat> DrawCCTs(const CCTInfo& cct_info);
-
+//十进制转二进制
 vector<int> IntToBin(const int& num_,const int&N);
-
+//在一张图上画一批CCT
 cv::Mat DrawCCTsOnAPic(const CCTInfo& cct_info);
-
+//二进制移位，用在二进制转最小十进制上
 vector<int> MoveBit(const vector<int>& bin);
-
+//判断是不是已经有同心的椭圆在椭圆容器里了，用在从轮廓中提取到同心最小的椭圆轮廓容器
 bool IsIn(const cv::RotatedRect& temp_r,const vector<cv::RotatedRect> & ellipse_rects_c1);
-
+//计算仿射变换矩阵，抄的Python代码
 cv::Mat GetTransMatrix(const cv::Mat& src, const cv::Mat& dst);
-
-cv::Point GetTransCenter(const cv::Mat& M, const cv::Point& P);
+//读取图像
+cv::Mat ReadImg(const string& file_path);
+//图片前处理，包括灰度化与二值化
+cv::Mat TranImgPre(const cv::Mat& color_img);
+//提取所有合适的轮廓：ellipse_rects
+vector<cv::RotatedRect> GetAllEs(const cv::Mat& binary_img);
+//提取里面的椭圆轮廓：ellipse_rects_c1
+vector<cv::RotatedRect> Get1Es(const vector<cv::RotatedRect>& ellipse_rects);
+//获取2与3
+vector<vector<cv::RotatedRect>> Get2_3Es(const vector<cv::RotatedRect>& ellipse_rects_c1);
+//剪切图像
+vector<cv::Mat> CutImg(const vector<cv::RotatedRect>& e3, const cv::Mat& color_img);
+//得到该图像的所有结果
+vector<int> GetResult(const int& N, const CCTColor& color, 
+	const string& file_path,
+	const cv::Mat& color_img, 
+	const vector<cv::RotatedRect>& ellipse_rects_c1,
+	const vector<cv::RotatedRect>& ellipse_rects_c2, 
+	const vector<cv::RotatedRect>& ellipse_rects_c3, 
+	const vector<cv::Mat>&cct_imgs);
+//仿射变换+处理剪切的图像
+cv::Mat TranImg(const cv::Mat& img,
+	const cv::RotatedRect& box1, 
+	const cv::RotatedRect& box3);
+//解码
+int Decode(const int&N,const CCTColor&color,const cv::Mat &erode_img);
+//绘制
+void DrawResult(const int& a_result, const cv::Mat& color_img,
+	const string& file_path,
+	const cv::RotatedRect& box1,
+	const cv::RotatedRect& box2,
+	const cv::RotatedRect& box3);
