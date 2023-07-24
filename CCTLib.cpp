@@ -68,7 +68,7 @@ cv::Mat DrawACCT(const ACCTInfo& acct_info)
 		}
 	}
 	//绘制扇形
-	Flabellate flabellate(circlel1.center, 0.4*acct_info.size, -1, circlel1.color);
+	Flabellate flabellate(circlel1.center, 0.3*acct_info.size, -1, circlel1.color);
 	double unit_angle = 360.0 / acct_info.N;//单位角度
 	int k = 0;
 	vector<int> bin = IntToBin(acct_info.num,acct_info.N);
@@ -88,13 +88,6 @@ cv::Mat DrawACCT(const ACCTInfo& acct_info)
 		circle_in_large.radius,
 		circle_in_large.color,
 		circle_in_large.thickness);
-	//绘制里面的圆周
-	//cv::circle(image, circlel1.center, circlel1.radius,
-	//	circlel1.color, circlel1.thickness);
-	//再绘制外面的圆周
-	//Circle circlel2(circlel1.center, 0.4 * acct_info.size, 1, circlel1.color);
-	//cv::circle(image, circlel2.center, circlel2.radius,
-	//	circlel2.color, circlel2.thickness);
 	//绘制内小圆
 	Circle circle_in_small(circlel1.center, 0.1*acct_info.size, -1, circlel1.color);
 	cv::circle(image, circle_in_small.center,
@@ -134,6 +127,8 @@ bool IsIn(const cv::RotatedRect& temp_r, const vector<cv::RotatedRect>& ellipse_
 cv::Mat GetTransMatrix(const cv::Mat& src, const cv::Mat& dst)
 {
 	int m = src.rows;
+	float A_[10][6];
+	float b_[10][1];
 	cv::Mat A(2 * m, 6, CV_32F, cv::Scalar(0));
 	cv::Mat b(2 * m, 1, CV_32F, cv::Scalar(0));
 	for (size_t i = 0; i < m; i++)
@@ -152,8 +147,22 @@ cv::Mat GetTransMatrix(const cv::Mat& src, const cv::Mat& dst)
 				A.at<float>(2 * i + j, 2) = src.at<float>(i, 0);
 				A.at<float>(2 * i + j, 3) = src.at<float>(i, 1);
 				A.at<float>(2 * i + j, 5) = 1;
-				b.at<float>(2 * i + j, 0) = dst.at<float>(i, 0);
+				b.at<float>(2 * i + j, 0) = dst.at<float>(i, 1);
 			}
+		}
+	}
+	for (size_t p1 = 0; p1 < 10; p1++)
+	{
+		for (size_t p2 = 0; p2 < 6; p2++)
+		{
+			A_[p1][p2] = A.at<float>(p1, p2);
+		}
+	}
+	for (size_t p1 = 0; p1 < 10; p1++)
+	{
+		for (size_t p2 = 0; p2 < 1; p2++)
+		{
+			b_[p1][p2] = b.at<float>(p1, p2);
 		}
 	}
 	cv::Mat A_transponse = A.t();
@@ -162,7 +171,23 @@ cv::Mat GetTransMatrix(const cv::Mat& src, const cv::Mat& dst)
 	if (det < 0.1) return cv::Mat();
 	cv::Mat AtA_inverse;
 	cv::invert(AtA, AtA_inverse, cv::DECOMP_LU);
+	float Nbb[6][6];
+	for (size_t p1 = 0; p1 < 6; p1++)
+	{
+		for (size_t p2 = 0; p2 < 6; p2++)
+		{
+			Nbb[p1][p2] = AtA_inverse.at<float>(p1, p2);
+		}
+	}
+	float x_[6][1];
 	cv::Mat x = (AtA_inverse * A_transponse) * b;
+	for (size_t p1 = 0; p1 < 6; p1++)
+	{
+		for (size_t p2 = 0; p2 < 1; p2++)
+		{
+			x_[p1][p2] = x.at<float>(p1, p2);
+		}
+	}
 	cv::Mat M = (cv::Mat_<float>(2, 3) <<
 		x.at<float>(0, 0), x.at<float>(1, 0), x.at<float>(4, 0),
 		x.at<float>(2, 0), x.at<float>(3, 0), x.at<float>(5, 0)
@@ -254,7 +279,7 @@ vector<int> DecodeCCT(const DetectCCTInfo& detect_cct_info)
 			cv::Size2f(e.size.width * 2, e.size.height * 2),
 			e.angle));
 		ellipse_rects_c3.push_back(cv::RotatedRect(e.center,
-			cv::Size2f(e.size.width * 4, e.size.height * 4),
+			cv::Size2f(e.size.width * 3, e.size.height * 3),
 			e.angle));
 	}
 	vector<cv::Mat> cct_imgs;//剪切图像
@@ -280,60 +305,58 @@ vector<int> DecodeCCT(const DetectCCTInfo& detect_cct_info)
 		vector<int>temp;
 		cv::Mat eroded_img;
 		//前处理剪切下的图像
-		{
-			//仿射变换
-			cv::Mat img = cct_imgs[i];
-			cv::imshow("tr", img);
-			cv::waitKey(0);
-			cv::RotatedRect box1 = ellipse_rects_c1[i];
-			cv::RotatedRect box3 = ellipse_rects_c3[i];
-			cv::Mat min_rect;
-			cv::boxPoints(box1, min_rect);
-			float a = max(box3.size.height, box3.size.width);
-			float dx = box1.center.x - a / 2;
-			float dy = box1.center.y - a / 2;
-			cv::Mat src = (cv::Mat_<float>(5, 2) <<
-				min_rect.at<float>(1, 0) - dx, min_rect.at<float>(1, 1) - dy,
-				min_rect.at<float>(2, 0) - dx, min_rect.at<float>(2, 1) - dy,
-				min_rect.at<float>(3, 0) - dx, min_rect.at<float>(3, 1) - dy,
-				min_rect.at<float>(0, 0) - dx, min_rect.at<float>(0, 1) - dy,
-				box1.center.x - dx, box1.center.y - dy
-				);
-			cv::Mat dst = (cv::Mat_<float>(5, 2) <<
-				box1.center.x - a / 2 - dx, box1.center.y - a / 2 - dy,
-				box1.center.x + a / 2 - dx, box1.center.y - a / 2 - dy,
-				box1.center.x + a / 2 - dx, box1.center.y + a / 2 - dy,
-				box1.center.x - a / 2 - dx, box1.center.y + a / 1 - dy,
-				box1.center.x - dx, box1.center.y - dy
-				);
-			cv::Mat M = GetTransMatrix(src, dst);
-			if (M.empty()) continue;
-			cv::Point center_tran = GetTransCenter(M, cv::Point(box1.center.x - dx, box1.center.y - dy));
-			cv::Mat transformed_img;
-			cv::warpAffine(img, transformed_img, M, cv::Size(a, a));
-			//缩放
-			cv::Mat large_img;
-			cv::resize(transformed_img, large_img, cv::Size(200, 200), cv::INTER_LANCZOS4);
-			//灰度化
-			cv::Mat gray_img;
-			cv::cvtColor(large_img,
-				gray_img,
-				cv::COLOR_BGR2GRAY);
-			//腐蚀
-			cv::Mat kernel = cv::getStructuringElement(
-				cv::MORPH_RECT,
-				cv::Size(3, 3)
+
+		//仿射变换
+		cv::Mat img = cct_imgs[i];
+		cv::RotatedRect box1 = ellipse_rects_c1[i];
+		cv::RotatedRect box3 = ellipse_rects_c3[i];
+		cv::Mat min_rect;
+		cv::boxPoints(box3, min_rect);
+		float a = max(box3.size.height, box3.size.width);
+		float dx = box1.center.x - a / 2;
+		float dy = box1.center.y - a / 2;
+		cv::Mat src = (cv::Mat_<float>(5, 2) <<
+			min_rect.at<float>(0, 0) - dx, min_rect.at<float>(0, 1) - dy,
+			min_rect.at<float>(1, 0) - dx, min_rect.at<float>(1, 1) - dy,
+			min_rect.at<float>(2, 0) - dx, min_rect.at<float>(2, 1) - dy,
+			min_rect.at<float>(3, 0) - dx, min_rect.at<float>(3, 1) - dy,
+			box1.center.x - dx, box1.center.y - dy
 			);
-			cv::erode(gray_img, eroded_img, kernel);
-			cct_imgs_after_tran.push_back(eroded_img);
-		}
+		cv::Mat dst = (cv::Mat_<float>(5, 2) <<
+			box1.center.x - a / 2 - dx, box1.center.y - a / 2 - dy,
+			box1.center.x + a / 2 - dx, box1.center.y - a / 2 - dy,
+			box1.center.x + a / 2 - dx, box1.center.y + a / 2 - dy,
+			box1.center.x - a / 2 - dx, box1.center.y + a / 2 - dy,
+			box1.center.x - dx, box1.center.y - dy
+			);
+		cv::Mat M = GetTransMatrix(src, dst);
+		if (M.empty()) continue;
+		cv::Point center_tran = GetTransCenter(M, cv::Point(box1.center.x - dx, box1.center.y - dy));
+		cv::Mat transformed_img;
+		cv::warpAffine(img, transformed_img, M, cv::Size(a, a));
+		//缩放
+		cv::Mat large_img;
+		cv::resize(transformed_img, large_img, cv::Size(200, 200), cv::INTER_LANCZOS4);
+		//灰度化
+		cv::Mat gray_img;
+		cv::cvtColor(large_img,
+			gray_img,
+			cv::COLOR_BGR2GRAY);
+		//腐蚀
+		cv::Mat kernel = cv::getStructuringElement(
+			cv::MORPH_RECT,
+			cv::Size(3, 3)
+		);
+		cv::erode(gray_img, eroded_img, kernel);
+		cct_imgs_after_tran.push_back(eroded_img);
 		//采样解码
-		cv::Point cct_center(100, 100);
+		cv::Point cen = GetTransCenter(M, cv::Point(100, 100));
+		cv::Point cct_center = cv::Point(100, 100);
 		int unite_angle = 360 / detect_cct_info.N;
 		for (size_t n = 0; n < detect_cct_info.N; n++)
 		{
 			vector<int> re_a;
-			for (size_t i = 45; i < 75; i++)
+			for (size_t i = 70; i < 100; i++)
 			{
 				int row = round(
 					cct_center.y - i * sin(
@@ -345,6 +368,9 @@ vector<int> DecodeCCT(const DetectCCTInfo& detect_cct_info)
 						(n * unite_angle + 0.5 * unite_angle) * PI / 180
 					)
 				);
+				/*cv::circle(eroded_img, cv::Point(col, row), 50, cv::Scalar(0, 0, 255));
+				cv::imshow("1", eroded_img);
+				cv::waitKey(0);*/
 				uchar* data = eroded_img.ptr<uchar>(row);
 				int intensity = data[col];
 				re_a.push_back(
@@ -357,7 +383,6 @@ vector<int> DecodeCCT(const DetectCCTInfo& detect_cct_info)
 			(sum > 125) ? sum = 0 : sum = 1;
 			temp.push_back(sum);
 		}
-		//reverse(temp.begin(), temp.end());
 		if (detect_cct_info.color == white)
 		{
 			for (size_t k = 0; k < temp.size(); k++)
@@ -367,8 +392,8 @@ vector<int> DecodeCCT(const DetectCCTInfo& detect_cct_info)
 		}
 		//绘制
 		int a_result = BinToInt(temp);
-		if (a_result == 0)
-			continue;
+		/*if (a_result == 0)
+			continue;*/
 		cv::ellipse(color_img, ellipse_rects_c1[i], 
 			cv::Scalar(0, 255, 0), 1);
 		cv::ellipse(color_img, ellipse_rects_c2[i],
