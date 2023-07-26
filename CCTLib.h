@@ -77,6 +77,19 @@ public:
 	ACCTInfo(const ACCTInfo& acct_info_);
 	ACCTInfo();
 };
+struct DrawCCTOnP
+{
+	int num;//编码的整数
+	int N;//编码位数
+	CCTColor color;//编码的颜色
+	cv::Mat img;//待绘制的图片
+	cv::Point pos;//绘制的位置
+public:
+	DrawCCTOnP(const int& num_, const int& N_,
+		const CCTColor& color_, const cv::Mat& img_, const cv::Point& pos_);
+	DrawCCTOnP(const DrawCCTOnP& info_);
+	DrawCCTOnP();
+};
 //绘制一批环形码所需的信息
 struct CCTInfo
 {
@@ -140,3 +153,7 @@ void DrawResult(const int& a_result, const cv::Mat& color_img,
 	const cv::RotatedRect& box2,
 	const cv::RotatedRect& box3);
 int Decode2(const int& N, const CCTColor& color, const cv::Mat& erode_img);
+
+void DrawIpadImg(const int& width, const int& height);
+
+cv::Mat DrawACCTOnPic(const DrawCCTOnP& info);

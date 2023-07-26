@@ -447,6 +447,84 @@ int Decode2(const int& N, const CCTColor& color, const cv::Mat& erode_img)
 	return(Decode(N, color, erode_img, e2[0], e3[0]));
 }
 
+void DrawIpadImg(const int& width, const int& height)
+{
+	cv::Mat img (height, width, CV_32F);
+	img.setTo(cv::Scalar(255, 255, 255));
+	for (int i = 150; i < height; i += 200)
+	{
+		for (int j = 150; j < width; j += 200)
+		{
+			if (i >= height - 80 || j >= width - 80 )
+				continue;
+			if (i==550&&j==750||i==950&&j==750||
+				i==550&&j==1350||i==950&&j==1350)
+			{
+				int num = 0;
+				if (i == 550 && j == 750) num = 243;
+				if (i == 950 && j == 750) num = 255;
+				if (i == 550 && j == 1350) num = 15;
+				if (i == 950 && j == 1350) num = 31;
+				DrawCCTOnP info(num, 8, black, img, cv::Point(j, i));
+				img = DrawACCTOnPic(info);
+				continue;
+			}
+			cv::circle(img, cv::Point(j, i), 25, cv::Scalar(0, 0, 0),-1);
+			cv::circle(img, cv::Point(j, i), 50, cv::Scalar(0, 0, 0));
+			cv::circle(img, cv::Point(j, i), 75, cv::Scalar(0, 0, 0));
+		}
+	}
+	cv::imwrite("./1.bmp", img);
+}
+
+cv::Mat DrawACCTOnPic(const DrawCCTOnP& info)
+{
+	cv::Mat image = info.img;
+	cv::Scalar color1(0, 0, 0);
+	cv::Scalar color2(0, 0, 0);
+	switch (info.color)
+	{
+	case black:
+		color1 = cv::Scalar(0, 0, 0);
+		color2 = cv::Scalar(255, 255, 255);
+		break;
+	case white:
+		color1 = cv::Scalar(255, 255, 255);
+		color2 = cv::Scalar(0, 0, 0);
+		break;
+	default:
+		break;
+	}
+	//绘制扇形
+	Flabellate flabellate(info.pos, 75, -1, color1);
+	double unit_angle = 360.0 / info.N;//单位角度
+	int k = 0;
+	vector<int> bin = IntToBin(info.num, info.N);
+	for (int i : bin)
+	{
+		if (i == 1) cv::ellipse(image,
+			flabellate.center,
+			cv::Size(flabellate.radius,
+				flabellate.radius),
+			0, k * unit_angle, (k + 1) * unit_angle,
+			flabellate.color,
+			flabellate.thickness);
+		k += 1;
+	}
+	//绘制内大圆
+	cv::circle(image, info.pos,
+		50,
+		color2,
+		-1);
+	//绘制内小圆
+	Circle circle_in_small(info.pos, 25, -1, color1);
+	cv::circle(image, circle_in_small.center,
+		circle_in_small.radius,
+		circle_in_small.color,
+		circle_in_small.thickness);
+	return image;
+}
+
 vector<int> DecodeCCT(const DetectCCTInfo& detect_cct_info)
 {
 	cout << "识别开始！" << endl;
@@ -680,4 +758,28 @@ cv::Mat DrawCCTsOnAPic(const CCTInfo& cct_info)
 	}
 	cv::imwrite(file_path, merged_img);
 	return merged_img;
+}
+
+DrawCCTOnP::DrawCCTOnP(const int& num_, const int& N_, 
+	const CCTColor& color_, const cv::Mat& img_, 
+	const cv::Point& pos_):num(num_),N(N_),color(color_),img(img_),pos(pos_)
+{
+}
+
+DrawCCTOnP::DrawCCTOnP(const DrawCCTOnP& info_)
+{
+	this->color = info_.color;
+	this->N = info_.N;
+	this->num = info_.num;
+	this->img = info_.img;
+	this->pos = info_.pos;
+}
+
+DrawCCTOnP::DrawCCTOnP()
+{
+	this->color = black;
+	this->N = 0;
+	this->num = 0;
+	this->img = cv::Mat();
+	this->pos = cv::Point(0, 0);
 }
