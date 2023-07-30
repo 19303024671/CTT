@@ -461,17 +461,17 @@ void DrawIpadImg(const int& width, const int& height)
 				i==550&&j==1350||i==950&&j==1350)
 			{
 				int num = 0;
-				if (i == 550 && j == 750) num = 243;
+				if (i == 550 && j == 750) num = 238;
 				if (i == 950 && j == 750) num = 255;
 				if (i == 550 && j == 1350) num = 15;
-				if (i == 950 && j == 1350) num = 31;
+				if (i == 950 && j == 1350) num = 63;
 				DrawCCTOnP info(num, 8, black, img, cv::Point(j, i));
 				img = DrawACCTOnPic(info);
 				continue;
 			}
 			cv::circle(img, cv::Point(j, i), 25, cv::Scalar(0, 0, 0),-1);
-			cv::circle(img, cv::Point(j, i), 50, cv::Scalar(0, 0, 0));
-			cv::circle(img, cv::Point(j, i), 75, cv::Scalar(0, 0, 0));
+			cv::circle(img, cv::Point(j, i), 50, cv::Scalar(0, 0, 0),2);
+			cv::circle(img, cv::Point(j, i), 75, cv::Scalar(0, 0, 0),2);
 		}
 	}
 	cv::imwrite("./1.bmp", img);
