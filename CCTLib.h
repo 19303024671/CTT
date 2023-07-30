@@ -19,6 +19,16 @@ enum CCTColor
 	black = 1,
 	white = 0	
 };
+//库的返回结果
+struct Result
+{
+	int index;
+	cv::Point pos;
+public:
+	Result(const int& index_, const cv::Point& pos_);
+	Result(const Result& re_);
+	Result();
+};
 //文本
 struct Text
 {
@@ -102,7 +112,7 @@ public:
 	CCTInfo();
 };
 //识别编码总函数
-vector<int> DecodeCCT(const DetectCCTInfo& detect_cct_info);
+vector<Result> DecodeCCT(const DetectCCTInfo& detect_cct_info);
 //二进制转十进制
 int BinToInt(const vector<int>& bin);
 //画一张CCT
@@ -132,7 +142,7 @@ vector<vector<cv::RotatedRect>> Get2_3Es(const vector<cv::RotatedRect>& ellipse_
 //剪切图像
 vector<cv::Mat> CutImg(const vector<cv::RotatedRect>& e3, const cv::Mat& color_img);
 //得到该图像的所有结果
-vector<int> GetResult(const int& N, const CCTColor& color, 
+vector<Result> GetResult(const int& N, const CCTColor& color, 
 	const string& file_path,
 	const cv::Mat& color_img, 
 	const vector<cv::RotatedRect>& ellipse_rects_c1,

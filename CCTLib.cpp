@@ -291,9 +291,9 @@ vector<cv::Mat> CutImg(const vector<cv::RotatedRect>& e3, const cv::Mat& color_i
 	return cct_imgs;
 }
 
-vector<int> GetResult(const int&N,const CCTColor&color,const string&file_path,const cv::Mat&color_img,const vector<cv::RotatedRect>& ellipse_rects_c1, const vector<cv::RotatedRect>& ellipse_rects_c2, const vector<cv::RotatedRect>& ellipse_rects_c3, const vector<cv::Mat>& cct_imgs)
+vector < Result > GetResult(const int& N, const CCTColor& color, const string& file_path, const cv::Mat& color_img, const vector<cv::RotatedRect>& ellipse_rects_c1, const vector<cv::RotatedRect>& ellipse_rects_c2, const vector<cv::RotatedRect>& ellipse_rects_c3, const vector<cv::Mat>& cct_imgs)
 {
-	vector<int> result;
+	vector<Result> result;
 	vector<int> tem = { 255,63,15,31 };
 	for (size_t i = 0; i < ellipse_rects_c3.size(); i++)
 	{
@@ -305,14 +305,16 @@ vector<int> GetResult(const int&N,const CCTColor&color,const string&file_path,co
 		cv::RotatedRect box2 = ellipse_rects_c2[i];
 		cv::Mat eroded_img = TranImg(img,box1,box3);//这张剪切下的图片变换后的图像
 		if (eroded_img.empty()) continue;
-
 		//解码
-		int a_result = Decode2(N, color, eroded_img);
-		if (IsOk(a_result, tem))
+		int index_ = Decode2(N, color, eroded_img);
+		if (IsOk(index_, tem))
 			continue;
-		result.push_back(a_result);
+		Result temp;
+		temp.index = index_;
+		temp.pos = box1.center;
+		result.push_back(temp);
 		//绘制
-		DrawResult(a_result, color_img, box1, box2, box3);
+		DrawResult(index_, color_img, box1, box2, box3);
 	}
 	return result;
 }
@@ -474,7 +476,7 @@ void DrawIpadImg(const int& width, const int& height)
 			cv::circle(img, cv::Point(j, i), 75, cv::Scalar(0, 0, 0),2);
 		}
 	}
-	cv::imwrite("./1.bmp", img);
+	cv::imwrite("./1.png", img);
 }
 
 cv::Mat DrawACCTOnPic(const DrawCCTOnP& info)
@@ -532,7 +534,7 @@ bool IsOk(const int& re, const vector<int>& tem)
 	return true;
 }
 
-vector<int> DecodeCCT(const DetectCCTInfo& detect_cct_info)
+vector<Result> DecodeCCT(const DetectCCTInfo& detect_cct_info)
 {
 	cout << "---------------------------------" << endl;
 	cout << detect_cct_info.file_path<<"识别开始！" << endl;
@@ -548,9 +550,6 @@ vector<int> DecodeCCT(const DetectCCTInfo& detect_cct_info)
 	bar.update();
 	//提取里面的椭圆轮廓：ellipse_rects_c1
 	vector<cv::RotatedRect> ellipse_rects_c1 = Get1Es(ellipse_rects);
-	//cv::ellipse(binary_img, ellipse_rects[0], cv::Scalar(0, 255, 0));
-	//cv::imshow("1", binary_img);
-	//cv::waitKey(0);
 	vector<vector<cv::RotatedRect>> e23 = Get2_3Es(ellipse_rects_c1);
 	vector<cv::RotatedRect> ellipse_rects_c2 = e23[0];//中间的椭圆0.2
 	vector<cv::RotatedRect> ellipse_rects_c3 = e23[1];//最大的0.3
@@ -559,7 +558,7 @@ vector<int> DecodeCCT(const DetectCCTInfo& detect_cct_info)
 	vector<cv::Mat> cct_imgs = CutImg(ellipse_rects_c3, color_img);
 	bar.update();
 	//保存这张原图像上提取到的所有的结果
-	vector<int>result = GetResult(detect_cct_info.N,
+	vector<Result>result = GetResult(detect_cct_info.N,
 		detect_cct_info.color, detect_cct_info.file_path, 
 		color_img, ellipse_rects_c1,
 		ellipse_rects_c2, ellipse_rects_c3, cct_imgs);
@@ -791,5 +790,22 @@ DrawCCTOnP::DrawCCTOnP()
 	this->N = 0;
 	this->num = 0;
 	this->img = cv::Mat();
+	this->pos = cv::Point(0, 0);
+}
+
+Result::Result(const int& index_, const cv::Point& pos_):
+	index(index_),pos(pos_)
+{
+}
+
+Result::Result(const Result& re_)
+{
+	this->index = re_.index;
+	this->pos = re_.pos;
+}
+
+Result::Result()
+{
+	this->index = 0;
 	this->pos = cv::Point(0, 0);
 }
