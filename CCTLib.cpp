@@ -294,6 +294,7 @@ vector<cv::Mat> CutImg(const vector<cv::RotatedRect>& e3, const cv::Mat& color_i
 vector<int> GetResult(const int&N,const CCTColor&color,const string&file_path,const cv::Mat&color_img,const vector<cv::RotatedRect>& ellipse_rects_c1, const vector<cv::RotatedRect>& ellipse_rects_c2, const vector<cv::RotatedRect>& ellipse_rects_c3, const vector<cv::Mat>& cct_imgs)
 {
 	vector<int> result;
+	vector<int> tem = { 255,63,15,31 };
 	for (size_t i = 0; i < ellipse_rects_c3.size(); i++)
 	{
 		//仿射变换
@@ -307,7 +308,7 @@ vector<int> GetResult(const int&N,const CCTColor&color,const string&file_path,co
 
 		//解码
 		int a_result = Decode2(N, color, eroded_img);
-		if (a_result == 0)
+		if (IsOk(a_result, tem))
 			continue;
 		result.push_back(a_result);
 		//绘制
@@ -392,7 +393,6 @@ int Decode(const int& N, const CCTColor& color,
 					(n * unite_angle + 0.5 * unite_angle) * PI / 180
 				))
 			);
-			//cv::circle(eroded_img, cv::Point(col, row),10, cv::Scalar(0, 255, 0));
 			if (row <= 0 || row >= eroded_img.rows || col <= 0 || col >= eroded_img.cols)
 				return 0;
 			uchar* data = eroded_img.ptr<uchar>(row);
@@ -525,9 +525,17 @@ cv::Mat DrawACCTOnPic(const DrawCCTOnP& info)
 	return image;
 }
 
+bool IsOk(const int& re, const vector<int>& tem)
+{
+	for (const auto& i : tem)
+		if (re == i) return false;
+	return true;
+}
+
 vector<int> DecodeCCT(const DetectCCTInfo& detect_cct_info)
 {
-	cout << "识别开始！" << endl;
+	cout << "---------------------------------" << endl;
+	cout << detect_cct_info.file_path<<"识别开始！" << endl;
 	ProgressBar bar(6);
 	//读取图片
 	cv::Mat color_img = ReadImg(detect_cct_info.file_path);
@@ -556,8 +564,10 @@ vector<int> DecodeCCT(const DetectCCTInfo& detect_cct_info)
 		color_img, ellipse_rects_c1,
 		ellipse_rects_c2, ellipse_rects_c3, cct_imgs);
 	bar.update();
-	cv::imwrite(detect_cct_info.file_path, color_img);
-	cout << "\n识别成功！" << endl;
+	string save_file_path = detect_cct_info.file_path;
+	save_file_path = save_file_path.replace(save_file_path.find("test_img"), 8, "save_img");
+	cv::imwrite(save_file_path, color_img);
+	cout << "\n"<< detect_cct_info.file_path << "识别成功！" << endl;
 	return result;
 }
 

@@ -157,3 +157,5 @@ int Decode2(const int& N, const CCTColor& color, const cv::Mat& erode_img);
 void DrawIpadImg(const int& width, const int& height);
 
 cv::Mat DrawACCTOnPic(const DrawCCTOnP& info);
+
+bool IsOk(const int& re, const vector<int>& tem);
