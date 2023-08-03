@@ -184,7 +184,7 @@ cv::Mat TranImgPre(const cv::Mat& color_img)
 		cv::COLOR_BGR2GRAY);
 	cv::Mat binary_img;
 	cv::adaptiveThreshold(gray_img, binary_img, 255,
-		cv::ADAPTIVE_THRESH_MEAN_C, cv::THRESH_BINARY,
+		cv::ADAPTIVE_THRESH_GAUSSIAN_C, cv::THRESH_BINARY,
 		121, 2);
 	return binary_img;
 }
@@ -307,7 +307,6 @@ vector < Result > GetResult(const int& N, const CCTColor& color, const string& f
 		if (eroded_img.empty()) continue;
 		//解码
 		int index_ = Decode2(N, color, eroded_img);
-		int index_ = Decode(N, color, eroded_img, box2, box3);
 		if (IsOk(index_, tem))
 			continue;
 		Result temp;
@@ -360,12 +359,6 @@ cv::Mat TranImg(const cv::Mat& img, const cv::RotatedRect& box1, const cv::Rotat
 	cv::adaptiveThreshold(gray_img, binary_img,255,
 		cv::ADAPTIVE_THRESH_GAUSSIAN_C, cv::THRESH_BINARY,
 		121,2);
-	//腐蚀
-	/*cv::Mat kernel = cv::getStructuringElement(
-		cv::MORPH_RECT,
-		cv::Size(3, 3)
-	);*/
-	//cv::erode(binary_img, eroded_img, kernel);
 	eroded_img = binary_img;
 	return eroded_img;
 }
@@ -380,41 +373,12 @@ int Decode(const int& N, const CCTColor& color,
 	cv::Mat eroded_img = erode_img;
 	//采样解码
 	cv::Point cct_center = box2.center;
-	int unite_angle = 360 / N;
-	vector<int>temp;
-	for (size_t n = 0; n < N; n++)
-	{
-		vector<int> re_a;
-		for (size_t i = a;i < b; i++)
-		{
-			int row = int(round(
-				cct_center.y - i * sin(
-					(n * unite_angle + 0.5 * unite_angle) * PI / 180
-				))
-			);
-			int col = int(round(
-				cct_center.x + i * cos(
-					(n * unite_angle + 0.5 * unite_angle) * PI / 180
-				))
-			);
-			if (row <= 0 || row >= eroded_img.rows || col <= 0 || col >= eroded_img.cols)
-				continue;
-			uchar* data = eroded_img.ptr<uchar>(row);
-			int intensity = data[col];
-			re_a.push_back(
-				intensity);
-		}
-		int sum = 0;
-		for (const auto& r : re_a)
-			sum += r;
-		sum /= int(re_a.size());
-		(sum > 125) ? sum = 0 : sum = 1;
-		temp.push_back(sum);
-	}
+	vector<int> temp = GetTemp(N, a, b, eroded_img, cct_center);
 	if (temp.empty())
 	{
 		a = 70; b = 90;
 		cct_center = cv::Point(100, 100);
+		temp = GetTemp(N, a, b, eroded_img, cct_center);
 	}
 	if (color == white)
 	{
@@ -470,7 +434,7 @@ void DrawIpadImg(const int& width, const int& height)
 				i==550&&j==1350||i==950&&j==1350)
 			{
 				int num = 0;
-				if (i == 550 && j == 750) num = 15;
+				if (i == 550 && j == 750) num = 0;
 				if (i == 950 && j == 750) num = 3;
 				if (i == 550 && j == 1350) num = 15;
 				if (i == 950 && j == 1350) num = 63;
@@ -568,6 +532,8 @@ vector<int> GetTemp(const int& N, const int& a, const int& b, const cv::Mat& img
 			re_a.push_back(
 				intensity);
 		}
+		if (re_a.empty())
+			continue;
 		int sum = 0;
 		for (const auto& r : re_a)
 			sum += r;
