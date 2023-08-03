@@ -169,3 +169,5 @@ void DrawIpadImg(const int& width, const int& height);
 cv::Mat DrawACCTOnPic(const DrawCCTOnP& info);
 
 bool IsOk(const int& re, const vector<int>& tem);
+
+vector<int> GetTemp(const int& N, const int& a, const int& b, const cv::Mat& img, const cv::Point& center);

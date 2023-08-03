@@ -183,9 +183,9 @@ cv::Mat TranImgPre(const cv::Mat& color_img)
 	cv::cvtColor(color_img, gray_img,
 		cv::COLOR_BGR2GRAY);
 	cv::Mat binary_img;
-	cv::adaptiveThreshold(gray_img, binary_img, 1,
+	cv::adaptiveThreshold(gray_img, binary_img, 255,
 		cv::ADAPTIVE_THRESH_MEAN_C, cv::THRESH_BINARY,
-		11, 2);
+		121, 2);
 	return binary_img;
 }
 
@@ -294,7 +294,7 @@ vector<cv::Mat> CutImg(const vector<cv::RotatedRect>& e3, const cv::Mat& color_i
 vector < Result > GetResult(const int& N, const CCTColor& color, const string& file_path, const cv::Mat& color_img, const vector<cv::RotatedRect>& ellipse_rects_c1, const vector<cv::RotatedRect>& ellipse_rects_c2, const vector<cv::RotatedRect>& ellipse_rects_c3, const vector<cv::Mat>& cct_imgs)
 {
 	vector<Result> result;
-	vector<int> tem = { 0,3,15,63 };
+	vector<int> tem = { 15,31,63,255 };
 	for (size_t i = 0; i < ellipse_rects_c3.size(); i++)
 	{
 		//仿射变换
@@ -307,6 +307,7 @@ vector < Result > GetResult(const int& N, const CCTColor& color, const string& f
 		if (eroded_img.empty()) continue;
 		//解码
 		int index_ = Decode2(N, color, eroded_img);
+		int index_ = Decode(N, color, eroded_img, box2, box3);
 		if (IsOk(index_, tem))
 			continue;
 		Result temp;
@@ -358,13 +359,14 @@ cv::Mat TranImg(const cv::Mat& img, const cv::RotatedRect& box1, const cv::Rotat
 	cv::Mat binary_img = large_img;
 	cv::adaptiveThreshold(gray_img, binary_img,255,
 		cv::ADAPTIVE_THRESH_GAUSSIAN_C, cv::THRESH_BINARY,
-		1023,2);
+		121,2);
 	//腐蚀
-	cv::Mat kernel = cv::getStructuringElement(
+	/*cv::Mat kernel = cv::getStructuringElement(
 		cv::MORPH_RECT,
 		cv::Size(3, 3)
-	);
-	cv::erode(binary_img, eroded_img, kernel);
+	);*/
+	//cv::erode(binary_img, eroded_img, kernel);
+	eroded_img = binary_img;
 	return eroded_img;
 }
 
@@ -396,7 +398,7 @@ int Decode(const int& N, const CCTColor& color,
 				))
 			);
 			if (row <= 0 || row >= eroded_img.rows || col <= 0 || col >= eroded_img.cols)
-				return 0;
+				continue;
 			uchar* data = eroded_img.ptr<uchar>(row);
 			int intensity = data[col];
 			re_a.push_back(
@@ -408,6 +410,11 @@ int Decode(const int& N, const CCTColor& color,
 		sum /= int(re_a.size());
 		(sum > 125) ? sum = 0 : sum = 1;
 		temp.push_back(sum);
+	}
+	if (temp.empty())
+	{
+		a = 70; b = 90;
+		cct_center = cv::Point(100, 100);
 	}
 	if (color == white)
 	{
@@ -463,7 +470,7 @@ void DrawIpadImg(const int& width, const int& height)
 				i==550&&j==1350||i==950&&j==1350)
 			{
 				int num = 0;
-				if (i == 550 && j == 750) num = 0;
+				if (i == 550 && j == 750) num = 15;
 				if (i == 950 && j == 750) num = 3;
 				if (i == 550 && j == 1350) num = 15;
 				if (i == 950 && j == 1350) num = 63;
@@ -475,7 +482,7 @@ void DrawIpadImg(const int& width, const int& height)
 			img = DrawACCTOnPic(info);
 		}
 	}
-	cv::imwrite("./1.bmp", img);
+	cv::imwrite("./test_img/Ipad.bmp", img);
 }
 
 cv::Mat DrawACCTOnPic(const DrawCCTOnP& info)
@@ -531,6 +538,44 @@ bool IsOk(const int& re, const vector<int>& tem)
 	for (const auto& i : tem)
 		if (re == i) return false;
 	return true;
+}
+
+vector<int> GetTemp(const int& N, const int& a, const int& b, const cv::Mat& img, const cv::Point& center)
+{
+	cv::Mat eroded_img = img;
+	cv::Point cct_center = center;
+	int unite_angle = 360 / N;
+	vector<int>temp;
+	for (size_t n = 0; n < N; n++)
+	{
+		vector<int> re_a;
+		for (size_t i = a; i < b; i++)
+		{
+			int row = int(round(
+				cct_center.y - i * sin(
+					(n * unite_angle + 0.5 * unite_angle) * PI / 180
+				))
+				);
+			int col = int(round(
+				cct_center.x + i * cos(
+					(n * unite_angle + 0.5 * unite_angle) * PI / 180
+				))
+				);
+			if (row <= 0 || row >= eroded_img.rows || col <= 0 || col >= eroded_img.cols)
+				continue;
+			uchar* data = eroded_img.ptr<uchar>(row);
+			int intensity = data[col];
+			re_a.push_back(
+				intensity);
+		}
+		int sum = 0;
+		for (const auto& r : re_a)
+			sum += r;
+		sum /= int(re_a.size());
+		(sum > 125) ? sum = 0 : sum = 1;
+		temp.push_back(sum);
+	}
+	return temp;
 }
 
 vector<Result> DecodeCCT(const DetectCCTInfo& detect_cct_info)
