@@ -294,7 +294,7 @@ vector<cv::Mat> CutImg(const vector<cv::RotatedRect>& e3, const cv::Mat& color_i
 vector < Result > GetResult(const int& N, const CCTColor& color, const string& file_path, const cv::Mat& color_img, const vector<cv::RotatedRect>& ellipse_rects_c1, const vector<cv::RotatedRect>& ellipse_rects_c2, const vector<cv::RotatedRect>& ellipse_rects_c3, const vector<cv::Mat>& cct_imgs)
 {
 	vector<Result> result;
-	vector<int> tem = { 255,63,15,31 };
+	vector<int> tem = { 0,3,15,63 };
 	for (size_t i = 0; i < ellipse_rects_c3.size(); i++)
 	{
 		//仿射变换
@@ -463,20 +463,19 @@ void DrawIpadImg(const int& width, const int& height)
 				i==550&&j==1350||i==950&&j==1350)
 			{
 				int num = 0;
-				if (i == 550 && j == 750) num = 238;
-				if (i == 950 && j == 750) num = 255;
+				if (i == 550 && j == 750) num = 0;
+				if (i == 950 && j == 750) num = 3;
 				if (i == 550 && j == 1350) num = 15;
 				if (i == 950 && j == 1350) num = 63;
 				DrawCCTOnP info(num, 8, black, img, cv::Point(j, i));
 				img = DrawACCTOnPic(info);
 				continue;
 			}
-			cv::circle(img, cv::Point(j, i), 25, cv::Scalar(0, 0, 0),-1);
-			cv::circle(img, cv::Point(j, i), 50, cv::Scalar(0, 0, 0),2);
-			cv::circle(img, cv::Point(j, i), 75, cv::Scalar(0, 0, 0),2);
+			DrawCCTOnP info(255, 8, black, img, cv::Point(j, i));
+			img = DrawACCTOnPic(info);
 		}
 	}
-	cv::imwrite("./1.png", img);
+	cv::imwrite("./1.bmp", img);
 }
 
 cv::Mat DrawACCTOnPic(const DrawCCTOnP& info)
