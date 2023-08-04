@@ -9,7 +9,6 @@
 #include <opencv2/core/utils/logger.hpp>
 #include"ProgressBar.hpp"
 
-
 using namespace std;
 namespace fs = std::filesystem;
 
@@ -134,7 +133,7 @@ cv::Mat GetTransMatrix(const cv::Mat& src, const cv::Mat& dst);
 //读取图像
 cv::Mat ReadImg(const string& file_path);
 //图片前处理，包括灰度化与二值化
-cv::Mat TranImgPre(const cv::Mat& color_img);
+cv::Mat TranImgPre(const cv::Mat& color_img,const int&top);
 //提取所有合适的轮廓：ellipse_rects
 vector<cv::RotatedRect> GetAllEs(const cv::Mat& binary_img);
 //提取里面的椭圆轮廓：ellipse_rects_c1
@@ -149,11 +148,13 @@ vector<Result> GetResult(const int& N, const CCTColor& color,
 	const cv::Mat& color_img, const vector<cv::RotatedRect>& ellipse_rects_c1,
 	const vector<cv::RotatedRect>& ellipse_rects_c2,
 	const vector<cv::RotatedRect>& ellipse_rects_c3,
-	const vector<cv::Mat>& cct_imgs);
+	const vector<cv::Mat>& cct_imgs,
+	const int&top);
 //仿射变换+处理剪切的图像
 cv::Mat TranImg(const cv::Mat& img,
 	const cv::RotatedRect& box1, 
-	const cv::RotatedRect& box3);
+	const cv::RotatedRect& box3,
+	const int&top);
 //解码
 int Decode(const int&N,const CCTColor&color,const cv::Mat &erode_img,
 	const cv::RotatedRect& box2,
@@ -172,3 +173,5 @@ cv::Mat DrawACCTOnPic(const DrawCCTOnP& info);
 bool IsOk(const int& re, const vector<int>& tem);
 
 vector<int> GetTemp(const int& N, const int& a, const int& b, const cv::Mat& img, const cv::Point& center);
+
+bool GetIt(const vector<int>& save, const vector<Result>& result);
