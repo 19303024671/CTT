@@ -9,7 +9,8 @@ using namespace std;
 
 
 DetectCCTInfo::DetectCCTInfo(const string& file_path_,
-	const CCTColor& color_,const int&N_) :file_path(file_path_), color(color_),N(N_)
+	const CCTColor& color_,const int&N_,const vector<int>&save_) :
+	file_path(file_path_), color(color_),N(N_),save(save_)
 {
 }
 
@@ -18,6 +19,7 @@ DetectCCTInfo::DetectCCTInfo(const DetectCCTInfo& detect_cct_info_)
 	this->color = detect_cct_info_.color;
 	this->file_path = detect_cct_info_.file_path;
 	this->N = detect_cct_info_.N;
+	this->save = detect_cct_info_.save;
 }
 
 DetectCCTInfo::DetectCCTInfo()
@@ -25,6 +27,7 @@ DetectCCTInfo::DetectCCTInfo()
 	this->color = black;
 	this->file_path = "";
 	this->N = 0;
+	this->save = vector<int>(0);
 }
 
 cv::Mat DrawACCT(const ACCTInfo& acct_info)
@@ -291,10 +294,14 @@ vector<cv::Mat> CutImg(const vector<cv::RotatedRect>& e3, const cv::Mat& color_i
 	return cct_imgs;
 }
 
-vector < Result > GetResult(const int& N, const CCTColor& color, const string& file_path, const cv::Mat& color_img, const vector<cv::RotatedRect>& ellipse_rects_c1, const vector<cv::RotatedRect>& ellipse_rects_c2, const vector<cv::RotatedRect>& ellipse_rects_c3, const vector<cv::Mat>& cct_imgs)
+vector < Result > GetResult(const int& N, const CCTColor& color, 
+	const string& file_path, const vector<int>&save, 
+	const cv::Mat& color_img, const vector<cv::RotatedRect>& ellipse_rects_c1, 
+	const vector<cv::RotatedRect>& ellipse_rects_c2, 
+	const vector<cv::RotatedRect>& ellipse_rects_c3,
+	const vector<cv::Mat>& cct_imgs)
 {
 	vector<Result> result;
-	vector<int> tem = { 15,31,63,255 };
 	for (size_t i = 0; i < ellipse_rects_c3.size(); i++)
 	{
 		//仿射变换
@@ -307,7 +314,7 @@ vector < Result > GetResult(const int& N, const CCTColor& color, const string& f
 		if (eroded_img.empty()) continue;
 		//解码
 		int index_ = Decode2(N, color, eroded_img);
-		if (IsOk(index_, tem))
+		if (IsOk(index_, save))
 			continue;
 		Result temp;
 		temp.index = index_;
@@ -569,7 +576,8 @@ vector<Result> DecodeCCT(const DetectCCTInfo& detect_cct_info)
 	bar.update();
 	//保存这张原图像上提取到的所有的结果
 	vector<Result>result = GetResult(detect_cct_info.N,
-		detect_cct_info.color, detect_cct_info.file_path, 
+		detect_cct_info.color, detect_cct_info.file_path,
+		detect_cct_info.save,
 		color_img, ellipse_rects_c1,
 		ellipse_rects_c2, ellipse_rects_c3, cct_imgs);
 	bar.update();

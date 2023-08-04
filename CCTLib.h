@@ -50,8 +50,10 @@ struct DetectCCTInfo
 	string file_path;//环形码路径
 	CCTColor color;//环形码的颜色
 	int N;//编码位数
+	vector<int> save;//图片中需要识别的环形码的值，
+	//没有在改容器内的识别到也不会保存
 public:
-	DetectCCTInfo(const string& file_path_, const CCTColor& color_ , const int&N_);
+	DetectCCTInfo(const string& file_path_, const CCTColor& color_, const int& N_, const vector<int>& save_);
 	DetectCCTInfo(const DetectCCTInfo&detect_cct_info_);
 	DetectCCTInfo();
 };
@@ -142,13 +144,12 @@ vector<vector<cv::RotatedRect>> Get2_3Es(const vector<cv::RotatedRect>& ellipse_
 //剪切图像
 vector<cv::Mat> CutImg(const vector<cv::RotatedRect>& e3, const cv::Mat& color_img);
 //得到该图像的所有结果
-vector<Result> GetResult(const int& N, const CCTColor& color, 
-	const string& file_path,
-	const cv::Mat& color_img, 
-	const vector<cv::RotatedRect>& ellipse_rects_c1,
-	const vector<cv::RotatedRect>& ellipse_rects_c2, 
-	const vector<cv::RotatedRect>& ellipse_rects_c3, 
-	const vector<cv::Mat>&cct_imgs);
+vector<Result> GetResult(const int& N, const CCTColor& color,
+	const string& file_path, const vector<int>& save,
+	const cv::Mat& color_img, const vector<cv::RotatedRect>& ellipse_rects_c1,
+	const vector<cv::RotatedRect>& ellipse_rects_c2,
+	const vector<cv::RotatedRect>& ellipse_rects_c3,
+	const vector<cv::Mat>& cct_imgs);
 //仿射变换+处理剪切的图像
 cv::Mat TranImg(const cv::Mat& img,
 	const cv::RotatedRect& box1, 
