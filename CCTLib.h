@@ -9,7 +9,7 @@
 #include <opencv2/core/utils/logger.hpp>
 #include"ProgressBar.hpp"
 
-using namespace std;‘
+using namespace std;
 namespace fs = std::filesystem;
 
 //环形码的颜色
